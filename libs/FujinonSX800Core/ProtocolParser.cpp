@@ -92,14 +92,6 @@ bool ProtocolParser::parseExtendedResponse(
         status.manualIrisPosition = status.irisPosition;
         return true;
     }
-    case 0xC1U: // Log Data / Temperature response
-    case 0xD1U: {
-        if (d1 != 0 || d2 != 0) {
-            const auto intPart = static_cast<std::int8_t>(d1);
-            status.internalTemperatureC = static_cast<double>(intPart) + (static_cast<double>(d2) / 10.0);
-        }
-        return true;
-    }
     default:
         break;
     }
@@ -144,14 +136,6 @@ bool ProtocolParser::parseQueryResponse(
         if (packet[2] != 0 || packet[3] != 0) {
             status.fwVersionMajor = packet[2];
             status.fwVersionMinor = packet[3];
-            return true;
-        }
-    }
-
-    if (lastQuery == "QueryTemperature" || lastQuery == "QueryLogData") {
-        if (packet[2] != 0 || packet[3] != 0) {
-            const auto intPart = static_cast<std::int8_t>(packet[2]);
-            status.internalTemperatureC = static_cast<double>(intPart) + (static_cast<double>(packet[3]) / 10.0);
             return true;
         }
     }

@@ -290,7 +290,6 @@ void FujinonCamera::pollingLoop()
         enqueueCommand(m_builder.buildQueryZoomPosition(), "QueryZoom");
         enqueueCommand(m_builder.buildQueryFocusPosition(), "QueryFocus");
         enqueueCommand(m_builder.buildQueryLensStatus(), "QueryLens");
-        enqueueCommand(m_builder.buildQueryTemperature(), "QueryTemperature");
     }
 }
 
@@ -604,7 +603,6 @@ void FujinonCamera::queryAll()
 {
     enqueueCommand(m_builder.buildQuerySerialNumber(), "QuerySerial");
     enqueueCommand(m_builder.buildQueryFwVersion(), "QueryFw");
-    enqueueCommand(m_builder.buildQueryTemperature(), "QueryTemperature");
     enqueueCommand(m_builder.buildQueryLensStatus(), "QueryLens");
     enqueueCommand(m_builder.buildQueryZoomPosition(), "QueryZoom");
     enqueueCommand(m_builder.buildQueryFocusPosition(), "QueryFocus");

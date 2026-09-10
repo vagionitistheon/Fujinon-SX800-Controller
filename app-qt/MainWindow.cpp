@@ -104,11 +104,11 @@ void MainWindow::handleDisconnect()
 
 void MainWindow::handleStatusUpdated(const FujinonSX800::CameraStatus& status)
 {
-    const QString msg = tr("Online | Zoom: %1 mm (FOV %2°) | Focus: %3 m | Temp: %4 °C")
+    const QString msg = tr("Online | Zoom: %1 mm (FOV %2°) | Focus: %3 m | Color Temp: %4 K")
                             .arg(status.focalLengthMm, 0, 'f', 1)
                             .arg(status.horizontalFovDeg, 0, 'f', 1)
                             .arg(status.subjectDistanceM, 0, 'f', 1)
-                            .arg(status.internalTemperatureC, 0, 'f', 1);
+                            .arg(status.colorTemperatureKelvin);
     statusBar()->showMessage(msg);
 }
 

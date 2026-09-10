@@ -44,8 +44,8 @@ void SystemTab::setupUi()
     lblAddressVal->setObjectName("lblTelemetry");
     telemLayout->addWidget(lblAddressVal, 2, 1);
 
-    telemLayout->addWidget(new QLabel(tr("Lens Temperature:"), grpTelemetry), 3, 0);
-    lblTempVal = new QLabel("25.0 °C", grpTelemetry);
+    telemLayout->addWidget(new QLabel(tr("Chassis/Lens Temp:"), grpTelemetry), 3, 0);
+    lblTempVal = new QLabel(tr("N/A (Not supported on SX800)"), grpTelemetry);
     lblTempVal->setObjectName("lblTelemetry");
     telemLayout->addWidget(lblTempVal, 3, 1);
 
@@ -180,7 +180,7 @@ void SystemTab::updateTelemetry(const FujinonSX800::CameraStatus& status)
         lblFwVal->setText(QString("v%1.%2").arg(status.fwVersionMajor).arg(status.fwVersionMinor));
     }
     lblAddressVal->setText(QString::number(status.rs485Address));
-    lblTempVal->setText(QString("%1 °C").arg(status.internalTemperatureC, 0, 'f', 1));
+    lblTempVal->setText(tr("N/A (Not supported)"));
 
     lblZoomMoving->setText(status.zoomMoving ? tr("MOVING") : tr("Idle"));
     lblZoomMoving->setStyleSheet(status.zoomMoving ? "color: #e3b341; font-weight: bold;" : "color: #58a6ff;");

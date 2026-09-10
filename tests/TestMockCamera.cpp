@@ -17,7 +17,7 @@ void testMockIntegration()
 
     std::atomic<bool> gotStatusUpdate { false };
     camera.addStatusCallback([&](const FujinonSX800::CameraStatus& status) {
-        if (!status.serialNumber.empty() && status.fwVersionMajor == 2U && status.internalTemperatureC > 26.0) {
+        if (!status.serialNumber.empty() && status.fwVersionMajor == 2U) {
             gotStatusUpdate = true;
         }
     });
@@ -38,7 +38,6 @@ void testMockIntegration()
     const auto status = camera.getStatus();
     assert(status.serialNumber == "SX800999");
     assert(status.fwVersionMajor == 2U && status.fwVersionMinor == 12U);
-    assert(status.internalTemperatureC >= 26.49 && status.internalTemperatureC <= 26.51);
     assert(status.rs485Address == 0x07U);
 
     // Test commanding zoom position
