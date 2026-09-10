@@ -153,8 +153,12 @@ enum class OpticalFilter : std::uint8_t {
 /// @enum IrWavelength
 /// @brief Infrared wavelength tuning.
 enum class IrWavelength : std::uint8_t {
+    VisibleLight = 0x00U,
     Standard = 0x00U,
-    Wave950nm = 0x01U
+    Wave950nm = 0x01U,
+    Wave940nm = 0x02U,
+    Wave850nm = 0x03U,
+    Wave808nm = 0x04U
 };
 
 /// @enum WdrMode

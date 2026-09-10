@@ -87,8 +87,11 @@ void DayNightTab::setupUi()
 
     scheduleLayout->addWidget(new QLabel(tr("Infrared Wavelength:"), grpSchedule), 4, 0);
     cmbIrWavelength = new QComboBox(grpSchedule);
-    cmbIrWavelength->addItem(tr("Standard IR"), static_cast<int>(FujinonSX800::IrWavelength::Standard));
+    cmbIrWavelength->addItem(tr("Visible Light / Off"), static_cast<int>(FujinonSX800::IrWavelength::VisibleLight));
     cmbIrWavelength->addItem(tr("950 nm (Near-IR)"), static_cast<int>(FujinonSX800::IrWavelength::Wave950nm));
+    cmbIrWavelength->addItem(tr("940 nm"), static_cast<int>(FujinonSX800::IrWavelength::Wave940nm));
+    cmbIrWavelength->addItem(tr("850 nm"), static_cast<int>(FujinonSX800::IrWavelength::Wave850nm));
+    cmbIrWavelength->addItem(tr("808 nm"), static_cast<int>(FujinonSX800::IrWavelength::Wave808nm));
     scheduleLayout->addWidget(cmbIrWavelength, 4, 1);
 
     mainLayout->addWidget(grpSchedule);

@@ -79,11 +79,47 @@ void testFwVersionVariants()
     assert(status.fwVersionMajor == 4U && status.fwVersionMinor == 1U);
 }
 
+void testExtendedQueryResponses()
+{
+    FujinonSX800::CameraStatus status;
+
+    // 0x1F Photo setting query response: d1=0x13 (OIS), d2=0x01 (OIS mode)
+    const auto oisResp = FujinonSX800::PelcoDFrame::createFrame(0x07U, 0xF0U, 0x1FU, 0x13U, 0x01U);
+    assert(FujinonSX800::ProtocolParser::parsePacket(oisResp, status));
+    assert(status.opticalStabilization == FujinonSX800::OpticalStabilization::OIS);
+
+    // 0x1F Photo setting query response: d1=0x11 (IR Wavelength), d2=0x03 (850nm)
+    const auto irResp = FujinonSX800::PelcoDFrame::createFrame(0x07U, 0xF0U, 0x1FU, 0x11U, 0x03U);
+    assert(FujinonSX800::ProtocolParser::parsePacket(irResp, status));
+    assert(status.irWavelength == FujinonSX800::IrWavelength::Wave850nm);
+
+    // 0x3F Image quality query response: d1=0x2B (Brightness), d2=15
+    const auto brightResp = FujinonSX800::PelcoDFrame::createFrame(0x07U, 0xF0U, 0x3FU, 0x2BU, 15U);
+    assert(FujinonSX800::ProtocolParser::parsePacket(brightResp, status));
+    assert(status.brightness == 15U);
+
+    // 0x3F Image quality query response: d1=0x21 (VLC Filter), d2=0x01 (On)
+    const auto vlcResp = FujinonSX800::PelcoDFrame::createFrame(0x07U, 0xF0U, 0x3FU, 0x21U, 0x01U);
+    assert(FujinonSX800::ProtocolParser::parsePacket(vlcResp, status));
+    assert(status.vlcFilter == FujinonSX800::VlcFilterMode::On);
+
+    // 0xAF Manual setting query response: d1=0x25 (Zoom speed), d2=8
+    const auto spdResp = FujinonSX800::PelcoDFrame::createFrame(0x07U, 0x00U, 0xAFU, 0x25U, 8U);
+    assert(FujinonSX800::ProtocolParser::parsePacket(spdResp, status));
+    assert(status.zoomSpeedEx == 8U);
+
+    // 0xFF Fine settings query response: d1=0xEB (Fine brightness), d2=-5 (0xFB)
+    const auto fineBrt = FujinonSX800::PelcoDFrame::createFrame(0x07U, 0xF0U, 0xFFU, 0xEBU, 0xFBU);
+    assert(FujinonSX800::ProtocolParser::parsePacket(fineBrt, status));
+    assert(status.fineBrightness == -5);
+}
+
 int main()
 {
     testGeneralAck();
     testExtendedResponses();
     test18ByteSerialResponse();
+    testExtendedQueryResponses();
     testFwVersionVariants();
 
     std::cout << "[PASS] TestProtocolParser completed successfully." << std::endl;

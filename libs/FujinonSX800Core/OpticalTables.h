@@ -29,6 +29,26 @@ public:
     /// @return HFOV in degrees.
     [[nodiscard]] static double pulseToHorizontalFov(std::uint16_t pulse) noexcept;
 
+    /// @brief Converts zoom pulse (0 - 65535) to Vertical Field of View in degrees.
+    /// @param[in] pulse 16-bit zoom position.
+    /// @return VFOV in degrees.
+    [[nodiscard]] static double pulseToVerticalFov(std::uint16_t pulse) noexcept;
+
+    /// @brief Converts zoom pulse (0 - 65535) to Diagonal Field of View in degrees.
+    /// @param[in] pulse 16-bit zoom position.
+    /// @return DFOV in degrees.
+    [[nodiscard]] static double pulseToDiagonalFov(std::uint16_t pulse) noexcept;
+
+    /// @brief Calculates Instantaneous Field of View (IFOV) in milliradians.
+    /// @param[in] focalLengthMm Current focal length in mm.
+    /// @param[in] sensorWidthMm Active sensor horizontal size in mm (default: 7.8 mm for 1/1.8" 16:9).
+    /// @param[in] imageWidthPixels Active horizontal pixel count (default: 1920).
+    /// @return IFOV in milliradians (mrad).
+    [[nodiscard]] static double calculateIfovMrad(
+        double focalLengthMm,
+        double sensorWidthMm = 7.8,
+        std::uint32_t imageWidthPixels = 1920U) noexcept;
+
     /// @brief Converts focal length in millimeters to closest 16-bit zoom pulse.
     /// @param[in] focalLengthMm Desired focal length in mm.
     /// @return 16-bit zoom pulse.

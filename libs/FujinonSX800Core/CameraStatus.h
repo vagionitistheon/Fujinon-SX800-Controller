@@ -18,6 +18,9 @@ struct CameraStatus {
     std::uint16_t zoomPosition { 0U };
     double focalLengthMm { 20.0 };
     double horizontalFovDeg { 20.974 };
+    double verticalFovDeg { 11.847 };
+    double diagonalFovDeg { 24.017 };
+    double ifovMrad { 0.203 };
     std::uint8_t zoomSpeed { 5U };
     std::uint8_t zoomSpeedEx { 5U };
     bool zoomMoving { false };

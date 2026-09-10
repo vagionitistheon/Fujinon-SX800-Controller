@@ -59,6 +59,26 @@ void testExtendedAndOriginalCommands()
     // Speed Ex: [0xFF, 0x07, 0xF1, 0x21, 0x00, 0x08, CKSM]
     const auto spdEx = builder.buildSetZoomSpeedEx(8U);
     assert(spdEx[2] == 0xF1U && spdEx[3] == 0x21U && spdEx[5] == 0x08U);
+
+    // Reboot: [0xFF, 0x07, 0xF0, 0x83, 0x00, 0x01, CKSM]
+    const auto reboot = builder.buildReboot();
+    assert(reboot[2] == 0xF0U && reboot[3] == 0x83U && reboot[4] == 0x00U && reboot[5] == 0x01U);
+
+    // Factory Reset: [0xFF, 0x07, 0xF0, 0x81, 0x00, 0x00, CKSM]
+    const auto reset = builder.buildFactoryReset();
+    assert(reset[2] == 0xF0U && reset[3] == 0x81U && reset[4] == 0x00U && reset[5] == 0x00U);
+
+    // Set Manual Day/Night: [0xFF, 0x07, 0xF0, 0x0F, 0x00, mode, CKSM]
+    const auto dn = builder.buildSetDayNight(FujinonSX800::DayNightMode::Night);
+    assert(dn[2] == 0xF0U && dn[3] == 0x0FU && dn[5] == static_cast<std::uint8_t>(FujinonSX800::DayNightMode::Night));
+
+    // Set IR Wavelength 850nm: [0xFF, 0x07, 0xF0, 0x11, 0x00, 0x03, CKSM]
+    const auto ir = builder.buildSetIrWavelength(FujinonSX800::IrWavelength::Wave850nm);
+    assert(ir[2] == 0xF0U && ir[3] == 0x11U && ir[5] == 0x03U);
+
+    // Set OIS Mode: [0xFF, 0x07, 0xF0, 0x13, 0x00, mode, CKSM]
+    const auto ois = builder.buildSetOpticalStabilization(FujinonSX800::OpticalStabilization::OIS);
+    assert(ois[2] == 0xF0U && ois[3] == 0x13U);
 }
 
 int main()

@@ -16,12 +16,24 @@ void testZoomConversions()
     const double hfovMin = FujinonSX800::OpticalTables::pulseToHorizontalFov(0U);
     assert(std::abs(hfovMin - 20.974) < 0.001);
 
-    // Pulse 65535 -> 800.0 mm, ~0.541 deg
+    // Pulse 65535 -> 800.0 mm, ~0.546 deg
     const double flMax = FujinonSX800::OpticalTables::pulseToFocalLength(65535U);
     assert(std::abs(flMax - 800.0) < 0.001);
 
     const double hfovMax = FujinonSX800::OpticalTables::pulseToHorizontalFov(65535U);
-    assert(std::abs(hfovMax - 0.541) < 0.001);
+    assert(std::abs(hfovMax - 0.546) < 0.001);
+
+    // VFOV & DFOV at Wide: 11.847 deg and 24.017 deg
+    const double vfovMin = FujinonSX800::OpticalTables::pulseToVerticalFov(0U);
+    assert(std::abs(vfovMin - 11.847) < 0.001);
+    const double dfovMin = FujinonSX800::OpticalTables::pulseToDiagonalFov(0U);
+    assert(std::abs(dfovMin - 24.017) < 0.001);
+
+    // IFOV calculation at wide (20mm) and tele (800mm)
+    const double ifovWide = FujinonSX800::OpticalTables::calculateIfovMrad(20.0);
+    assert(ifovWide > 0.20 && ifovWide < 0.21);
+    const double ifovTele = FujinonSX800::OpticalTables::calculateIfovMrad(800.0);
+    assert(ifovTele > 0.004 && ifovTele < 0.006);
 
     // Monotonic increase of focal length
     double lastFl = 0.0;

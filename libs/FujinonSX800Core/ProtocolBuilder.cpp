@@ -192,17 +192,17 @@ std::vector<std::uint8_t> ProtocolBuilder::buildSetAfSensitivity(AfSensitivity s
 
 std::vector<std::uint8_t> ProtocolBuilder::buildSetDayNight(DayNightMode mode) const
 {
-    return PelcoDFrame::createFrame(m_address, 0xF0U, 0x0DU, 0x00U, static_cast<std::uint8_t>(mode));
+    return PelcoDFrame::createFrame(m_address, 0xF0U, 0x0FU, 0x00U, static_cast<std::uint8_t>(mode));
 }
 
 std::vector<std::uint8_t> ProtocolBuilder::buildSetIrWavelength(IrWavelength wl) const
 {
-    return PelcoDFrame::createFrame(m_address, 0xF0U, 0x0FU, 0x00U, static_cast<std::uint8_t>(wl));
+    return PelcoDFrame::createFrame(m_address, 0xF0U, 0x11U, 0x00U, static_cast<std::uint8_t>(wl));
 }
 
 std::vector<std::uint8_t> ProtocolBuilder::buildSetOpticalStabilization(OpticalStabilization mode) const
 {
-    return PelcoDFrame::createFrame(m_address, 0xF0U, 0x11U, 0x00U, static_cast<std::uint8_t>(mode));
+    return PelcoDFrame::createFrame(m_address, 0xF0U, 0x13U, 0x00U, static_cast<std::uint8_t>(mode));
 }
 
 std::vector<std::uint8_t> ProtocolBuilder::buildQueryPhotoSettings() const
@@ -343,12 +343,12 @@ std::vector<std::uint8_t> ProtocolBuilder::buildRecallPreset(std::uint8_t preset
 
 std::vector<std::uint8_t> ProtocolBuilder::buildReboot() const
 {
-    return PelcoDFrame::createFrame(m_address, 0xF0U, 0x71U, 0x00U, 0x01U);
+    return PelcoDFrame::createFrame(m_address, 0xF0U, 0x83U, 0x00U, 0x01U);
 }
 
 std::vector<std::uint8_t> ProtocolBuilder::buildFactoryReset() const
 {
-    return PelcoDFrame::createFrame(m_address, 0xF0U, 0x73U, 0x00U, 0x01U);
+    return PelcoDFrame::createFrame(m_address, 0xF0U, 0x81U, 0x00U, 0x00U);
 }
 
 std::vector<std::uint8_t> ProtocolBuilder::buildQueryOperationSettings() const

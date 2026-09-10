@@ -55,10 +55,14 @@ bool ProtocolParser::parseExtendedResponse(
     const std::uint8_t d2 { packet[5] };
 
     switch (cmd2) {
+    case 0x83U: // Fujinon alternative zoom position opcode
     case 0x5DU: { // Zoom position response
         status.zoomPosition = static_cast<std::uint16_t>((d1 << 8U) | d2);
         status.focalLengthMm = OpticalTables::pulseToFocalLength(status.zoomPosition);
         status.horizontalFovDeg = OpticalTables::pulseToHorizontalFov(status.zoomPosition);
+        status.verticalFovDeg = OpticalTables::pulseToVerticalFov(status.zoomPosition);
+        status.diagonalFovDeg = OpticalTables::pulseToDiagonalFov(status.zoomPosition);
+        status.ifovMrad = OpticalTables::calculateIfovMrad(status.focalLengthMm);
         return true;
     }
     case 0x81U: { // Focus position response
@@ -90,6 +94,124 @@ bool ProtocolParser::parseExtendedResponse(
     case 0x89U: { // Iris position response
         status.irisPosition = static_cast<std::uint16_t>((d1 << 8U) | d2);
         status.manualIrisPosition = status.irisPosition;
+        return true;
+    }
+    case 0x1FU: { // Photo settings extended query response
+        switch (d1) {
+        case 0x09U:
+            status.afArea = static_cast<AfArea>(d2);
+            break;
+        case 0x0BU:
+            status.afSensitivity = static_cast<AfSensitivity>(d2);
+            break;
+        case 0x0FU:
+            status.dayNightMode = static_cast<DayNightMode>(d2);
+            break;
+        case 0x11U:
+            status.irWavelength = static_cast<IrWavelength>(d2);
+            break;
+        case 0x13U:
+            status.opticalStabilization = static_cast<OpticalStabilization>(d2);
+            status.stabilizationMode = status.opticalStabilization;
+            break;
+        default:
+            break;
+        }
+        return true;
+    }
+    case 0x3FU: { // Image quality extended query response
+        switch (d1) {
+        case 0x21U:
+            status.vlcFilter = static_cast<VlcFilterMode>(d2);
+            break;
+        case 0x23U:
+            status.wdr = static_cast<WdrMode>(d2);
+            status.wdrMode = status.wdr;
+            break;
+        case 0x27U:
+            status.deHeatHaze = static_cast<DeHeatHazeMode>(d2);
+            status.deHeatHazeMode = status.deHeatHaze;
+            break;
+        case 0x29U:
+            status.defog = static_cast<DefogMode>(d2);
+            status.defogMode = status.defog;
+            break;
+        case 0x2BU:
+            status.brightness = d2;
+            break;
+        case 0x2DU:
+            status.contrast = d2;
+            break;
+        case 0x2FU:
+            status.saturation = d2;
+            break;
+        case 0x31U:
+            status.sharpness = d2;
+            break;
+        case 0x35U:
+            status.whiteBalance = static_cast<WhiteBalanceMode>(d2);
+            status.whiteBalanceMode = status.whiteBalance;
+            break;
+        case 0x37U:
+            status.digitalZoom = static_cast<DigitalZoomMode>(d2);
+            status.digitalZoomMode = status.digitalZoom;
+            break;
+        case 0x39U:
+            status.noiseReduction = static_cast<NoiseReductionLevel>(d2);
+            break;
+        default:
+            break;
+        }
+        return true;
+    }
+    case 0xAFU: { // Manual settings extended query response
+        switch (d1) {
+        case 0x25U:
+            status.zoomSpeedEx = d2;
+            break;
+        case 0x27U:
+            status.focusSpeedEx = d2;
+            break;
+        case 0x2BU:
+            status.autoFocusMode = (d2 == 0x00U) ? AutoFocusMode::On : AutoFocusMode::Off;
+            break;
+        case 0x31U:
+            status.blcMode = (d2 != 0x00U) ? BlcMode::On : BlcMode::Off;
+            break;
+        default:
+            break;
+        }
+        return true;
+    }
+    case 0xFFU: { // Fine settings extended query response
+        switch (d1) {
+        case 0xEBU:
+            status.fineBrightness = static_cast<std::int8_t>(d2);
+            status.brightnessFine = status.fineBrightness;
+            break;
+        case 0xEDU:
+            status.fineContrast = static_cast<std::int8_t>(d2);
+            status.contrastFine = status.fineContrast;
+            break;
+        case 0xEFU:
+            status.fineSaturation = static_cast<std::int8_t>(d2);
+            status.saturationFine = status.fineSaturation;
+            break;
+        case 0xF1U:
+            status.fineSharpness = static_cast<std::int8_t>(d2);
+            status.sharpnessFine = status.fineSharpness;
+            break;
+        case 0xF5U:
+            status.wbRedShift = static_cast<std::int8_t>(d2);
+            status.wbShiftRedFine = status.wbRedShift;
+            break;
+        case 0xF7U:
+            status.wbBlueShift = static_cast<std::int8_t>(d2);
+            status.wbShiftBlueFine = status.wbBlueShift;
+            break;
+        default:
+            break;
+        }
         return true;
     }
     default:
