@@ -109,6 +109,18 @@ void SystemTab::setupUi()
     btnRefreshAll->setObjectName("btnPrimary");
     maintLayout->addWidget(btnRefreshAll);
 
+    auto* pollLayout = new QHBoxLayout();
+    chkContinuousPolling = new QCheckBox(tr("Continuous Polling:"), grpMaint);
+    pollLayout->addWidget(chkContinuousPolling);
+
+    spinPollInterval = new QSpinBox(grpMaint);
+    spinPollInterval->setRange(200, 10000);
+    spinPollInterval->setValue(1000);
+    spinPollInterval->setSingleStep(100);
+    spinPollInterval->setSuffix(" ms");
+    pollLayout->addWidget(spinPollInterval);
+    maintLayout->addLayout(pollLayout);
+
     btnResetDefaults = new QPushButton(tr("Factory Reset Defaults..."), grpMaint);
     btnResetDefaults->setObjectName("btnDanger");
     maintLayout->addWidget(btnResetDefaults);
@@ -131,6 +143,16 @@ void SystemTab::setupConnections()
     });
 
     connect(btnRefreshAll, &QPushButton::clicked, cam, &FujinonSX800Qt::QFujinonCamera::refreshStatus);
+
+    connect(chkContinuousPolling, &QCheckBox::toggled, this, [this](bool checked) {
+        cam->setTelemetryPolling(checked, spinPollInterval->value());
+    });
+
+    connect(spinPollInterval, QOverload<int>::of(&QSpinBox::valueChanged), this, [this](int val) {
+        if (chkContinuousPolling->isChecked()) {
+            cam->setTelemetryPolling(true, val);
+        }
+    });
 
     connect(btnResetDefaults, &QPushButton::clicked, this, [this]() {
         const auto res = QMessageBox::warning(this, tr("Factory Reset"),

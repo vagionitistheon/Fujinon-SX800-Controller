@@ -11,6 +11,7 @@
 #include <QGroupBox>
 #include <QLabel>
 #include <QPushButton>
+#include <QSpinBox>
 #include <QWidget>
 
 namespace FujinonSX800App {
@@ -53,6 +54,8 @@ private:
 
     // Actions
     QPushButton* btnRefreshAll { nullptr };
+    QCheckBox* chkContinuousPolling { nullptr };
+    QSpinBox* spinPollInterval { nullptr };
     QPushButton* btnResetDefaults { nullptr };
     QPushButton* btnReboot { nullptr };
 };

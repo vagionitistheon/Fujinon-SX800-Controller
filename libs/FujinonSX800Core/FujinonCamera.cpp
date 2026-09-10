@@ -64,6 +64,7 @@ void FujinonCamera::stop()
     m_queueCv.notify_all();
     m_rxCv.notify_all();
     m_responseCv.notify_all();
+    m_pollCv.notify_all();
 
     if (m_rxThread.joinable()) {
         m_rxThread.join();
@@ -136,6 +137,7 @@ void FujinonCamera::setTelemetryPolling(bool enable, std::uint32_t intervalMs) n
 {
     m_telemetryPolling = enable;
     m_pollIntervalMs = (intervalMs > 0U) ? intervalMs : 1000U;
+    m_pollCv.notify_all();
 }
 
 bool FujinonCamera::getTelemetryPolling() const noexcept
@@ -268,10 +270,20 @@ void FujinonCamera::workerLoop()
 
 void FujinonCamera::pollingLoop()
 {
-    while (m_running && m_telemetryPolling) {
-        std::this_thread::sleep_for(std::chrono::milliseconds(m_pollIntervalMs));
-        if (!m_running || !m_telemetryPolling) {
+    while (m_running) {
+        {
+            std::unique_lock<std::mutex> lock(m_pollMutex);
+            m_pollCv.wait_for(lock, std::chrono::milliseconds(m_pollIntervalMs), [this] {
+                return !m_running;
+            });
+        }
+
+        if (!m_running) {
             break;
+        }
+
+        if (!m_telemetryPolling) {
+            continue;
         }
 
         // Periodically refresh dynamic telemetry

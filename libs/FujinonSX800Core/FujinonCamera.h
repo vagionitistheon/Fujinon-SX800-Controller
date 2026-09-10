@@ -141,6 +141,8 @@ private:
     bool m_telemetryPolling { false };
     std::uint32_t m_pollIntervalMs { 1000U };
     std::uint32_t m_queryTimeoutMs { 1000U };
+    std::mutex m_pollMutex;
+    std::condition_variable m_pollCv;
 
     mutable std::mutex m_statusMutex;
     CameraStatus m_status;
