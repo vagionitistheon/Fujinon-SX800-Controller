@@ -101,6 +101,7 @@ public:
     void sendRawFrame(const std::vector<std::uint8_t>& frame);
     void sendQueryFrame(const std::vector<std::uint8_t>& frame, std::string queryTag = "CustomQuery");
     void queryAll();
+    void queryTemperature();
     void setTermination(bool enable);
     void reboot();
     void factoryReset();
@@ -146,6 +147,7 @@ private:
     std::string m_lastQueryTag;
 
     std::atomic<bool> m_awaitingResponse { false };
+    std::condition_variable m_responseCv;
     std::string m_pendingQueryTag;
     std::chrono::steady_clock::time_point m_querySentTime;
 

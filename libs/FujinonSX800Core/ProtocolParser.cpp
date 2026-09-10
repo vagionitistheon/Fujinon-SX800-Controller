@@ -36,7 +36,9 @@ bool ProtocolParser::parseGeneralAck(
     const std::vector<std::uint8_t>& packet, CameraStatus& status) noexcept
 {
     status.address = packet[1];
+    status.rs485Address = packet[1];
     status.connected = true;
+    status.isConnected = true;
     return true;
 }
 
@@ -44,7 +46,9 @@ bool ProtocolParser::parseExtendedResponse(
     const std::vector<std::uint8_t>& packet, CameraStatus& status) noexcept
 {
     status.address = packet[1];
+    status.rs485Address = packet[1];
     status.connected = true;
+    status.isConnected = true;
 
     const std::uint8_t cmd2 { packet[3] };
     const std::uint8_t d1 { packet[4] };
@@ -60,9 +64,11 @@ bool ProtocolParser::parseExtendedResponse(
     case 0x81U: { // Focus position response
         status.focusPosition = static_cast<std::uint16_t>((d1 << 8U) | d2);
         status.focusDistanceM = OpticalTables::pulseToDistance(status.focusPosition);
+        status.subjectDistanceM = status.focusDistanceM;
         return true;
     }
-    case 0x8BU: { // FW version response
+    case 0x8BU: // FW version response
+    case 0x7DU: {
         status.fwVersionMajor = d1;
         status.fwVersionMinor = d2;
         return true;
@@ -83,6 +89,15 @@ bool ProtocolParser::parseExtendedResponse(
     }
     case 0x89U: { // Iris position response
         status.irisPosition = static_cast<std::uint16_t>((d1 << 8U) | d2);
+        status.manualIrisPosition = status.irisPosition;
+        return true;
+    }
+    case 0xC1U: // Log Data / Temperature response
+    case 0xD1U: {
+        if (d1 != 0 || d2 != 0) {
+            const auto intPart = static_cast<std::int8_t>(d1);
+            status.internalTemperatureC = static_cast<double>(intPart) + (static_cast<double>(d2) / 10.0);
+        }
         return true;
     }
     default:
@@ -98,7 +113,9 @@ bool ProtocolParser::parseQueryResponse(
     std::string_view lastQuery) noexcept
 {
     status.address = packet[1];
+    status.rs485Address = packet[1];
     status.connected = true;
+    status.isConnected = true;
 
     // Check if it matches Serial Query or has ASCII characters
     if (lastQuery == "QuerySerial" || lastQuery.empty()) {
@@ -123,37 +140,65 @@ bool ProtocolParser::parseQueryResponse(
         }
     }
 
+    if (lastQuery == "QueryFw") {
+        if (packet[2] != 0 || packet[3] != 0) {
+            status.fwVersionMajor = packet[2];
+            status.fwVersionMinor = packet[3];
+            return true;
+        }
+    }
+
+    if (lastQuery == "QueryTemperature" || lastQuery == "QueryLogData") {
+        if (packet[2] != 0 || packet[3] != 0) {
+            const auto intPart = static_cast<std::int8_t>(packet[2]);
+            status.internalTemperatureC = static_cast<double>(intPart) + (static_cast<double>(packet[3]) / 10.0);
+            return true;
+        }
+    }
+
     if (lastQuery == "QueryPhotoSettings") {
         status.afArea = static_cast<AfArea>(packet[2]);
         status.afSensitivity = static_cast<AfSensitivity>(packet[3]);
         status.dayNightMode = static_cast<DayNightMode>(packet[4]);
         status.irWavelength = static_cast<IrWavelength>(packet[5]);
         status.opticalStabilization = static_cast<OpticalStabilization>(packet[6]);
+        status.stabilizationMode = status.opticalStabilization;
         return true;
     }
 
     if (lastQuery == "QueryImageQuality") {
         status.vlcFilter = static_cast<VlcFilterMode>(packet[2]);
         status.wdr = static_cast<WdrMode>(packet[3]);
+        status.wdrMode = status.wdr;
         status.deHeatHaze = static_cast<DeHeatHazeMode>(packet[4]);
+        status.deHeatHazeMode = status.deHeatHaze;
         status.defog = static_cast<DefogMode>(packet[5]);
+        status.defogMode = status.defog;
         status.brightness = packet[6];
         status.contrast = packet[7];
         status.saturation = packet[8];
         status.sharpness = packet[9];
         status.whiteBalance = static_cast<WhiteBalanceMode>(packet[10]);
+        status.whiteBalanceMode = status.whiteBalance;
         status.colorTemperatureKelvin = static_cast<std::uint16_t>((packet[11] << 8U) | packet[12]);
+        status.colorTempKelvin = status.colorTemperatureKelvin;
         status.digitalZoom = static_cast<DigitalZoomMode>(packet[13]);
+        status.digitalZoomMode = status.digitalZoom;
         status.noiseReduction = static_cast<NoiseReductionLevel>(packet[14]);
         return true;
     }
 
     if (lastQuery == "QueryDisplaySettings") {
         status.osdDateTime = packet[2] != 0U;
+        status.dateTimeDisplay = status.osdDateTime;
         status.osdTitle = packet[3] != 0U;
+        status.titleDisplay = status.osdTitle;
         status.osdId = packet[4] != 0U;
+        status.idDisplay = status.osdId;
         status.osdReticle = packet[5] != 0U;
+        status.centerPositionDisplay = status.osdReticle;
         status.osdAntialiasing = packet[6] != 0U;
+        status.antialiasingEnabled = status.osdAntialiasing;
         return true;
     }
 
@@ -161,22 +206,31 @@ bool ProtocolParser::parseQueryResponse(
         status.videoStandard = static_cast<VideoStandard>(packet[2]);
         status.hdFormat = static_cast<HdVideoFormat>(packet[3]);
         status.terminationEnabled = packet[4] != 0U;
+        status.rs485Termination = status.terminationEnabled;
         return true;
     }
 
     if (lastQuery == "QueryFineSettings") {
         status.fineBrightness = static_cast<std::int8_t>(packet[2]);
+        status.brightnessFine = status.fineBrightness;
         status.fineContrast = static_cast<std::int8_t>(packet[3]);
+        status.contrastFine = status.fineContrast;
         status.fineSaturation = static_cast<std::int8_t>(packet[4]);
+        status.saturationFine = status.fineSaturation;
         status.fineSharpness = static_cast<std::int8_t>(packet[5]);
+        status.sharpnessFine = status.fineSharpness;
         status.wbRedShift = static_cast<std::int8_t>(packet[6]);
+        status.wbShiftRedFine = status.wbRedShift;
         status.wbBlueShift = static_cast<std::int8_t>(packet[7]);
+        status.wbShiftBlueFine = status.wbBlueShift;
         return true;
     }
 
     if (lastQuery == "QueryDayNightEx") {
         status.filterDay = static_cast<OpticalFilter>(packet[2]);
+        status.opticalFilterDay = status.filterDay;
         status.filterNight = static_cast<OpticalFilter>(packet[3]);
+        status.opticalFilterNight = status.filterNight;
         return true;
     }
 

@@ -649,6 +649,13 @@ void QFujinonCamera::refreshAll()
     }
 }
 
+void QFujinonCamera::queryTemperature()
+{
+    if (m_camera) {
+        m_camera->queryTemperature();
+    }
+}
+
 QString QFujinonCamera::describePacket(bool isTx, const std::vector<std::uint8_t>& frame)
 {
     return QString::fromStdString(FujinonSX800::ProtocolParser::describeFrame(frame, isTx));

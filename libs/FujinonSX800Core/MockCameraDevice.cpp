@@ -143,7 +143,7 @@ void MockCameraDevice::processIncomingFrame(const std::vector<std::uint8_t>& fra
             response[2U + i] = static_cast<std::uint8_t>(serial[i]);
         }
         response[17] = PelcoDFrame::calculateChecksum(&response[1], 16U);
-    } else if (cmd1 == 0x00U && cmd2 == 0x7DU) {
+    } else if (cmd1 == 0x00U && (cmd2 == 0x8BU || cmd2 == 0x7DU)) {
         // Query FW Version -> 0x00, 0x8B, Major, Minor
         std::uint8_t maj { 2U };
         std::uint8_t min { 12U };
@@ -153,6 +153,16 @@ void MockCameraDevice::processIncomingFrame(const std::vector<std::uint8_t>& fra
             min = m_state.fwMinor;
         }
         response = PelcoDFrame::createFrame(m_address, 0x00U, 0x8BU, maj, min);
+    } else if (cmd1 == 0xF0U && cmd2 == 0xC1U) {
+        // Query Temperature -> 0xF0, 0xC1, intPart, fractPart
+        double temp { 26.5 };
+        {
+            std::lock_guard<std::mutex> lock(m_stateMutex);
+            temp = m_state.temperature;
+        }
+        const auto intPart = static_cast<std::uint8_t>(static_cast<int>(temp));
+        const auto fractPart = static_cast<std::uint8_t>(static_cast<int>(temp * 10.0) % 10);
+        response = PelcoDFrame::createFrame(m_address, 0xF0U, 0xC1U, intPart, fractPart);
     } else if (cmd1 == 0x00U && cmd2 == 0x7FU) {
         // Query Lens Status -> 0x00, 0x8D, d1, d2
         response = PelcoDFrame::createFrame(m_address, 0x00U, 0x8DU, 0x00U, 0x00U);

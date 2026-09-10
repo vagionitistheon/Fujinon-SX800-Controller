@@ -161,7 +161,7 @@ std::vector<std::uint8_t> ProtocolBuilder::buildQuerySerialNumber() const
 
 std::vector<std::uint8_t> ProtocolBuilder::buildQueryFwVersion() const
 {
-    return PelcoDFrame::createFrame(m_address, 0x00U, 0x7DU, 0x00U, 0x00U);
+    return PelcoDFrame::createFrame(m_address, 0x00U, 0x8BU, 0x00U, 0x00U);
 }
 
 std::vector<std::uint8_t> ProtocolBuilder::buildQueryLensStatus() const
@@ -382,6 +382,11 @@ std::vector<std::uint8_t> ProtocolBuilder::buildQuerySdMovieCount() const
 std::vector<std::uint8_t> ProtocolBuilder::buildQueryLogData(std::uint8_t type) const
 {
     return PelcoDFrame::createFrame(m_address, 0xF0U, 0xC1U, 0x00U, type);
+}
+
+std::vector<std::uint8_t> ProtocolBuilder::buildQueryTemperature() const
+{
+    return PelcoDFrame::createFrame(m_address, 0xF0U, 0xC1U, 0x00U, 0x05U);
 }
 
 // 5.11 Original Command 8 (Fine Settings)

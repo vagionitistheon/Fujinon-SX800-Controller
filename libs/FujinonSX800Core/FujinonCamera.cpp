@@ -63,6 +63,7 @@ void FujinonCamera::stop()
     m_running = false;
     m_queueCv.notify_all();
     m_rxCv.notify_all();
+    m_responseCv.notify_all();
 
     if (m_rxThread.joinable()) {
         m_rxThread.join();
@@ -162,6 +163,7 @@ void FujinonCamera::checkQueryTimeout()
     const auto elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(now - m_querySentTime).count();
     if (elapsed >= static_cast<long long>(m_queryTimeoutMs)) {
         m_awaitingResponse = false;
+        m_responseCv.notify_all();
         std::string tag;
         {
             std::lock_guard<std::mutex> lock(m_statusMutex);
@@ -247,6 +249,16 @@ void FujinonCamera::workerLoop()
                     cb(true, item.frame);
                 }
             }
+
+            if (!item.queryTag.empty()) {
+                {
+                    std::unique_lock<std::mutex> lock(m_statusMutex);
+                    m_responseCv.wait_for(lock, std::chrono::milliseconds(m_queryTimeoutMs), [this] {
+                        return !m_awaitingResponse.load() || !m_running;
+                    });
+                }
+                checkQueryTimeout();
+            }
         }
 
         // 20ms inter-command pacing delay per Pelco-D spec
@@ -266,6 +278,7 @@ void FujinonCamera::pollingLoop()
         enqueueCommand(m_builder.buildQueryZoomPosition(), "QueryZoom");
         enqueueCommand(m_builder.buildQueryFocusPosition(), "QueryFocus");
         enqueueCommand(m_builder.buildQueryLensStatus(), "QueryLens");
+        enqueueCommand(m_builder.buildQueryTemperature(), "QueryTemperature");
     }
 }
 
@@ -371,6 +384,7 @@ void FujinonCamera::dispatchFrame(const std::vector<std::uint8_t>& frame)
 
     if (ProtocolParser::parsePacket(frame, updatedStatus, qTag)) {
         m_awaitingResponse = false;
+        m_responseCv.notify_all();
         VLOG(1) << "Packet parsed successfully, updating status (tag: '" << qTag << "')";
         {
             std::lock_guard<std::mutex> lock(m_statusMutex);
@@ -578,6 +592,7 @@ void FujinonCamera::queryAll()
 {
     enqueueCommand(m_builder.buildQuerySerialNumber(), "QuerySerial");
     enqueueCommand(m_builder.buildQueryFwVersion(), "QueryFw");
+    enqueueCommand(m_builder.buildQueryTemperature(), "QueryTemperature");
     enqueueCommand(m_builder.buildQueryLensStatus(), "QueryLens");
     enqueueCommand(m_builder.buildQueryZoomPosition(), "QueryZoom");
     enqueueCommand(m_builder.buildQueryFocusPosition(), "QueryFocus");
@@ -588,6 +603,11 @@ void FujinonCamera::queryAll()
     enqueueCommand(m_builder.buildQueryFineSettings(), "QueryFineSettings");
     enqueueCommand(m_builder.buildQueryDayNightEx(), "QueryDayNightEx");
     enqueueCommand(m_builder.buildQuerySpeedEx(), "QuerySpeedEx");
+}
+
+void FujinonCamera::queryTemperature()
+{
+    enqueueCommand(m_builder.buildQueryTemperature(), "QueryTemperature");
 }
 
 } // namespace FujinonSX800

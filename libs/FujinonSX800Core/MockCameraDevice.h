@@ -32,6 +32,7 @@ struct MockInternalState {
     std::string serialNumber { "SX800999" };
     std::uint8_t fwMajor { 2U };
     std::uint8_t fwMinor { 12U };
+    double temperature { 26.5 };
 };
 
 /// @class MockCameraDevice

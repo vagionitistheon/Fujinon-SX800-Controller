@@ -136,6 +136,7 @@ public slots:
     void sendRawHex(const QByteArray& hexData);
     void sendRawHexPacket(const QString& hex);
     void refreshAll();
+    void queryTemperature();
 
 private:
     [[nodiscard]] static QString describePacket(bool isTx, const std::vector<std::uint8_t>& frame);

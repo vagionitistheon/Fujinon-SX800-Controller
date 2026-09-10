@@ -59,11 +59,54 @@ void test18ByteSerialResponse()
     assert(status.serialNumber == "SX800123");
 }
 
+void testTemperatureParsing()
+{
+    FujinonSX800::CameraStatus status;
+
+    // 7-byte extended temperature response: 26.5 °C
+    const auto tempResp7 = FujinonSX800::PelcoDFrame::createFrame(0x07U, 0xF0U, 0xC1U, 26U, 5U);
+    assert(FujinonSX800::ProtocolParser::parsePacket(tempResp7, status, "QueryTemperature"));
+    assert(status.internalTemperatureC >= 26.49 && status.internalTemperatureC <= 26.51);
+
+    // 18-byte temperature query response: 28.3 °C
+    std::vector<std::uint8_t> tempResp18(18U, 0x00U);
+    tempResp18[0] = 0xFFU;
+    tempResp18[1] = 0x07U;
+    tempResp18[2] = 28U;
+    tempResp18[3] = 3U;
+    tempResp18[17] = FujinonSX800::PelcoDFrame::calculateChecksum(&tempResp18[1], 16U);
+    assert(FujinonSX800::ProtocolParser::parsePacket(tempResp18, status, "QueryTemperature"));
+    assert(status.internalTemperatureC >= 28.29 && status.internalTemperatureC <= 28.31);
+    assert(status.rs485Address == 0x07U);
+}
+
+void testFwVersionVariants()
+{
+    FujinonSX800::CameraStatus status;
+
+    // 0x7D variant
+    const auto fw7D = FujinonSX800::PelcoDFrame::createFrame(0x07U, 0x00U, 0x7DU, 0x03U, 0x0EU);
+    assert(FujinonSX800::ProtocolParser::parsePacket(fw7D, status, "QueryFw"));
+    assert(status.fwVersionMajor == 3U && status.fwVersionMinor == 14U);
+
+    // 18-byte variant
+    std::vector<std::uint8_t> fw18(18U, 0x00U);
+    fw18[0] = 0xFFU;
+    fw18[1] = 0x07U;
+    fw18[2] = 4U;
+    fw18[3] = 1U;
+    fw18[17] = FujinonSX800::PelcoDFrame::calculateChecksum(&fw18[1], 16U);
+    assert(FujinonSX800::ProtocolParser::parsePacket(fw18, status, "QueryFw"));
+    assert(status.fwVersionMajor == 4U && status.fwVersionMinor == 1U);
+}
+
 int main()
 {
     testGeneralAck();
     testExtendedResponses();
     test18ByteSerialResponse();
+    testTemperatureParsing();
+    testFwVersionVariants();
 
     std::cout << "[PASS] TestProtocolParser completed successfully." << std::endl;
     return 0;

@@ -123,6 +123,7 @@ public:
     // 5.10 Original Command 7 (Log Data)
     // -------------------------------------------------------------------------
     [[nodiscard]] std::vector<std::uint8_t> buildQueryLogData(std::uint8_t type) const;
+    [[nodiscard]] std::vector<std::uint8_t> buildQueryTemperature() const;
 
     // -------------------------------------------------------------------------
     // 5.11 Original Command 8 (Fine Settings)
