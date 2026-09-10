@@ -38,11 +38,16 @@ public:
     bool start() { return connectCamera(); }
     void stop() { disconnectCamera(); }
 
+    void setAutoQueryOnConnect(bool enable);
+    void setTelemetryPolling(bool enable, int intervalMs = 1000);
+    void setQueryTimeoutMs(int timeoutMs);
+
 signals:
     void statusUpdated(const FujinonSX800::CameraStatus& status);
     void trafficLogged(bool isTx, const QByteArray& packet, const QString& description);
     void frameLogged(const QByteArray& frame, bool isTx);
     void connectionStateChanged(bool connected);
+    void queryTimeoutOccurred(const QString& queryTag);
 
 public slots:
     // Motion & Zoom/Focus

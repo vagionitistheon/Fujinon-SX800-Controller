@@ -81,13 +81,13 @@ void ConnectionWidget::setupUi()
     tcpLayout->setSpacing(6);
 
     auto* lblHost = new QLabel(tr("Host:"), pageTcp);
-    editTcpHost = new QLineEdit("192.168.1.100", pageTcp);
+    editTcpHost = new QLineEdit("10.10.10.64", pageTcp);
     editTcpHost->setFixedWidth(110);
 
     auto* lblTcpPort = new QLabel(tr("Port:"), pageTcp);
     spinTcpPort = new QSpinBox(pageTcp);
     spinTcpPort->setRange(1, 65535);
-    spinTcpPort->setValue(4001);
+    spinTcpPort->setValue(46006);
 
     tcpLayout->addWidget(lblHost);
     tcpLayout->addWidget(editTcpHost);

@@ -55,9 +55,37 @@ bool QFujinonCamera::connectCamera()
             });
         });
 
+    m_camera->addTimeoutCallback([this](const std::string& queryTag) {
+        const QString tag = QString::fromStdString(queryTag);
+        QMetaObject::invokeMethod(this, [this, tag] {
+            emit queryTimeoutOccurred(tag);
+        });
+    });
+
     const bool ok = m_camera->start();
     emit connectionStateChanged(ok);
     return ok;
+}
+
+void QFujinonCamera::setAutoQueryOnConnect(bool enable)
+{
+    if (m_camera) {
+        m_camera->setAutoQueryOnConnect(enable);
+    }
+}
+
+void QFujinonCamera::setTelemetryPolling(bool enable, int intervalMs)
+{
+    if (m_camera) {
+        m_camera->setTelemetryPolling(enable, static_cast<std::uint32_t>(intervalMs));
+    }
+}
+
+void QFujinonCamera::setQueryTimeoutMs(int timeoutMs)
+{
+    if (m_camera) {
+        m_camera->setQueryTimeoutMs(static_cast<std::uint32_t>(timeoutMs));
+    }
 }
 
 void QFujinonCamera::disconnectCamera()

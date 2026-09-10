@@ -28,6 +28,7 @@ class FujinonCamera {
 public:
     using StatusCallback = std::function<void(const CameraStatus& status)>;
     using TrafficCallback = std::function<void(bool isTx, const std::vector<std::uint8_t>& frame)>;
+    using TimeoutCallback = std::function<void(const std::string& queryTag)>;
 
     explicit FujinonCamera(std::shared_ptr<ITransport> transport, std::uint8_t address = 1U);
     ~FujinonCamera();
@@ -47,7 +48,15 @@ public:
 
     void addStatusCallback(StatusCallback cb);
     void addTrafficCallback(TrafficCallback cb);
+    void addTimeoutCallback(TimeoutCallback cb);
     [[nodiscard]] CameraStatus getStatus() const;
+
+    void setAutoQueryOnConnect(bool enable) noexcept;
+    [[nodiscard]] bool getAutoQueryOnConnect() const noexcept;
+    void setTelemetryPolling(bool enable, std::uint32_t intervalMs = 1000) noexcept;
+    [[nodiscard]] bool getTelemetryPolling() const noexcept;
+    void setQueryTimeoutMs(std::uint32_t timeoutMs) noexcept;
+    [[nodiscard]] std::uint32_t getQueryTimeoutMs() const noexcept;
 
     // Direct Optics & PTZ controls
     void zoomTele();
@@ -90,6 +99,7 @@ public:
     // Navigation, System & Maintenance
     void sendMenuKey(MenuKey key);
     void sendRawFrame(const std::vector<std::uint8_t>& frame);
+    void sendQueryFrame(const std::vector<std::uint8_t>& frame, std::string queryTag = "CustomQuery");
     void queryAll();
     void setTermination(bool enable);
     void reboot();
@@ -102,6 +112,7 @@ private:
     void rxLoop();
     void onDataReceived(const std::vector<std::uint8_t>& data);
     void dispatchFrame(const std::vector<std::uint8_t>& frame);
+    void checkQueryTimeout();
 
     struct CommandItem {
         std::vector<std::uint8_t> frame;
@@ -125,13 +136,23 @@ private:
     std::mutex m_rxMutex;
     std::condition_variable m_rxCv;
 
+    bool m_autoQueryOnConnect { false };
+    bool m_telemetryPolling { false };
+    std::uint32_t m_pollIntervalMs { 1000U };
+    std::uint32_t m_queryTimeoutMs { 1000U };
+
     mutable std::mutex m_statusMutex;
     CameraStatus m_status;
     std::string m_lastQueryTag;
 
+    std::atomic<bool> m_awaitingResponse { false };
+    std::string m_pendingQueryTag;
+    std::chrono::steady_clock::time_point m_querySentTime;
+
     mutable std::mutex m_callbackMutex;
     std::vector<StatusCallback> m_statusCallbacks;
     std::vector<TrafficCallback> m_trafficCallbacks;
+    std::vector<TimeoutCallback> m_timeoutCallbacks;
 };
 
 } // namespace FujinonSX800

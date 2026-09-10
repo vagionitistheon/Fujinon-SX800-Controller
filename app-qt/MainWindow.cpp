@@ -74,16 +74,22 @@ void MainWindow::setupConnections()
     connect(camera, &FujinonSX800Qt::QFujinonCamera::frameLogged, inspectorWidget, &TrafficInspectorWidget::logFrame);
     connect(inspectorWidget, &TrafficInspectorWidget::sendRawHexRequested, camera,
         &FujinonSX800Qt::QFujinonCamera::sendRawHex);
+
+    connect(camera, &FujinonSX800Qt::QFujinonCamera::queryTimeoutOccurred, this,
+        [this](const QString& tag) {
+            const QString warnMsg = tr("Warning: Timeout waiting for response to '%1'").arg(tag);
+            statusBar()->showMessage(warnMsg, 5000);
+        });
 }
 
 void MainWindow::handleConnect(std::shared_ptr<FujinonSX800::ITransport> transport, std::uint8_t address)
 {
-    camera->setTransport(transport);
+    camera->setTransport(transport, address);
     const bool ok = camera->start();
     connectionWidget->setConnectionState(ok);
 
     if (ok) {
-        statusBar()->showMessage(tr("Connected to camera (ID: %1). Telemetry active.").arg(address));
+        statusBar()->showMessage(tr("Connected to camera (ID: %1).").arg(address));
     } else {
         statusBar()->showMessage(tr("Failed to connect to transport device."));
     }

@@ -22,6 +22,7 @@ void testMockIntegration()
         }
     });
 
+    camera.setAutoQueryOnConnect(true);
     assert(camera.start());
     assert(camera.isConnected());
 
@@ -61,6 +62,26 @@ void testMockIntegration()
         std::this_thread::sleep_for(std::chrono::milliseconds(20));
     }
     assert(defogApplied);
+
+    // Test query response timeout
+    std::atomic<bool> timeoutTriggered { false };
+    std::string timedOutTag;
+    camera.setQueryTimeoutMs(50U);
+    camera.addTimeoutCallback([&](const std::string& tag) {
+        timeoutTriggered = true;
+        timedOutTag = tag;
+    });
+
+    // Send an unhandled command with a query tag to trigger timeout (address 0x09 is ignored by mock device)
+    camera.sendQueryFrame(FujinonSX800::PelcoDFrame::createFrame(0x09U, 0x00U, 0x55U, 0x00U, 0x00U), "TestQuery");
+    for (int i = 0; i < 40; ++i) {
+        if (timeoutTriggered.load()) {
+            break;
+        }
+        std::this_thread::sleep_for(std::chrono::milliseconds(10));
+    }
+    assert(timeoutTriggered.load());
+    assert(timedOutTag == "TestQuery");
 
     camera.stop();
     assert(!camera.isConnected());

@@ -46,10 +46,13 @@ bool FujinonCamera::start()
     m_running = true;
     m_rxThread = std::thread(&FujinonCamera::rxLoop, this);
     m_workerThread = std::thread(&FujinonCamera::workerLoop, this);
-    m_pollThread = std::thread(&FujinonCamera::pollingLoop, this);
+    if (m_telemetryPolling) {
+        m_pollThread = std::thread(&FujinonCamera::pollingLoop, this);
+    }
 
-    // Enqueue initial queries
-    queryAll();
+    if (m_autoQueryOnConnect) {
+        queryAll();
+    }
 
     return true;
 }
@@ -70,6 +73,7 @@ void FujinonCamera::stop()
     if (m_pollThread.joinable()) {
         m_pollThread.join();
     }
+    m_awaitingResponse = false;
 
     if (m_transport && m_transport->isOpen()) {
         m_transport->close();
@@ -111,6 +115,75 @@ void FujinonCamera::addTrafficCallback(TrafficCallback cb)
     m_trafficCallbacks.push_back(std::move(cb));
 }
 
+void FujinonCamera::addTimeoutCallback(TimeoutCallback cb)
+{
+    std::lock_guard<std::mutex> lock(m_callbackMutex);
+    m_timeoutCallbacks.push_back(std::move(cb));
+}
+
+void FujinonCamera::setAutoQueryOnConnect(bool enable) noexcept
+{
+    m_autoQueryOnConnect = enable;
+}
+
+bool FujinonCamera::getAutoQueryOnConnect() const noexcept
+{
+    return m_autoQueryOnConnect;
+}
+
+void FujinonCamera::setTelemetryPolling(bool enable, std::uint32_t intervalMs) noexcept
+{
+    m_telemetryPolling = enable;
+    m_pollIntervalMs = (intervalMs > 0U) ? intervalMs : 1000U;
+}
+
+bool FujinonCamera::getTelemetryPolling() const noexcept
+{
+    return m_telemetryPolling;
+}
+
+void FujinonCamera::setQueryTimeoutMs(std::uint32_t timeoutMs) noexcept
+{
+    m_queryTimeoutMs = (timeoutMs > 0U) ? timeoutMs : 1000U;
+}
+
+std::uint32_t FujinonCamera::getQueryTimeoutMs() const noexcept
+{
+    return m_queryTimeoutMs;
+}
+
+void FujinonCamera::checkQueryTimeout()
+{
+    if (!m_awaitingResponse.load()) {
+        return;
+    }
+
+    const auto now = std::chrono::steady_clock::now();
+    const auto elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(now - m_querySentTime).count();
+    if (elapsed >= static_cast<long long>(m_queryTimeoutMs)) {
+        m_awaitingResponse = false;
+        std::string tag;
+        {
+            std::lock_guard<std::mutex> lock(m_statusMutex);
+            tag = m_pendingQueryTag;
+        }
+
+        LOG(WARNING) << "Query timeout: No response received for query '" << tag
+                     << "' within " << m_queryTimeoutMs << " ms";
+
+        std::vector<TimeoutCallback> cbs;
+        {
+            std::lock_guard<std::mutex> lock(m_callbackMutex);
+            cbs = m_timeoutCallbacks;
+        }
+        for (const auto& cb : cbs) {
+            if (cb) {
+                cb(tag);
+            }
+        }
+    }
+}
+
 CameraStatus FujinonCamera::getStatus() const
 {
     std::lock_guard<std::mutex> lock(m_statusMutex);
@@ -129,15 +202,20 @@ void FujinonCamera::enqueueCommand(const std::vector<std::uint8_t>& frame, std::
 void FujinonCamera::workerLoop()
 {
     while (m_running) {
+        checkQueryTimeout();
+
         CommandItem item;
         {
             std::unique_lock<std::mutex> lock(m_queueMutex);
-            m_queueCv.wait(lock, [this] {
+            m_queueCv.wait_for(lock, std::chrono::milliseconds(50), [this] {
                 return !m_commandQueue.empty() || !m_running;
             });
 
             if (!m_running) {
                 break;
+            }
+            if (m_commandQueue.empty()) {
+                continue;
             }
 
             item = std::move(m_commandQueue.front());
@@ -148,6 +226,11 @@ void FujinonCamera::workerLoop()
             {
                 std::lock_guard<std::mutex> lock(m_statusMutex);
                 m_lastQueryTag = item.queryTag;
+                if (!item.queryTag.empty()) {
+                    m_pendingQueryTag = item.queryTag;
+                    m_querySentTime = std::chrono::steady_clock::now();
+                    m_awaitingResponse = true;
+                }
             }
 
             VLOG(1) << "Sending command (" << item.frame.size() << " bytes, tag: '" << item.queryTag << "')";
@@ -173,16 +256,16 @@ void FujinonCamera::workerLoop()
 
 void FujinonCamera::pollingLoop()
 {
-    while (m_running) {
-        std::this_thread::sleep_for(std::chrono::milliseconds(500));
-        if (!m_running) {
+    while (m_running && m_telemetryPolling) {
+        std::this_thread::sleep_for(std::chrono::milliseconds(m_pollIntervalMs));
+        if (!m_running || !m_telemetryPolling) {
             break;
         }
 
         // Periodically refresh dynamic telemetry
-        enqueueCommand(m_builder.buildQueryZoomPosition());
-        enqueueCommand(m_builder.buildQueryFocusPosition());
-        enqueueCommand(m_builder.buildQueryLensStatus());
+        enqueueCommand(m_builder.buildQueryZoomPosition(), "QueryZoom");
+        enqueueCommand(m_builder.buildQueryFocusPosition(), "QueryFocus");
+        enqueueCommand(m_builder.buildQueryLensStatus(), "QueryLens");
     }
 }
 
@@ -287,6 +370,7 @@ void FujinonCamera::dispatchFrame(const std::vector<std::uint8_t>& frame)
     }
 
     if (ProtocolParser::parsePacket(frame, updatedStatus, qTag)) {
+        m_awaitingResponse = false;
         VLOG(1) << "Packet parsed successfully, updating status (tag: '" << qTag << "')";
         {
             std::lock_guard<std::mutex> lock(m_statusMutex);
@@ -483,6 +567,11 @@ void FujinonCamera::sendMenuKey(MenuKey key)
 void FujinonCamera::sendRawFrame(const std::vector<std::uint8_t>& frame)
 {
     enqueueCommand(frame);
+}
+
+void FujinonCamera::sendQueryFrame(const std::vector<std::uint8_t>& frame, std::string queryTag)
+{
+    enqueueCommand(frame, std::move(queryTag));
 }
 
 void FujinonCamera::queryAll()
