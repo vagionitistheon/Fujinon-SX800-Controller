@@ -1,6 +1,8 @@
 #include "MockCameraDevice.h"
 #include "PelcoDFrame.h"
 
+#include <glog/logging.h>
+
 namespace FujinonSX800 {
 
 MockCameraDevice::MockCameraDevice(std::uint8_t address) noexcept
@@ -23,6 +25,8 @@ void MockCameraDevice::setInternalState(const MockInternalState& state)
 bool MockCameraDevice::open()
 {
     m_open = true;
+    LOG(INFO) << "MockCameraDevice opened (simulating camera address: "
+              << static_cast<int>(m_address) << ")";
     StateChangedCallback cb;
     {
         std::lock_guard<std::mutex> lock(m_callbackMutex);
@@ -37,6 +41,7 @@ bool MockCameraDevice::open()
 void MockCameraDevice::close()
 {
     m_open = false;
+    LOG(INFO) << "MockCameraDevice closed";
     StateChangedCallback cb;
     {
         std::lock_guard<std::mutex> lock(m_callbackMutex);
@@ -57,6 +62,8 @@ bool MockCameraDevice::sendData(const std::vector<std::uint8_t>& data)
     if (!m_open.load()) {
         return false;
     }
+
+    VLOG(1) << "MockCameraDevice processing input frame (" << data.size() << " bytes)";
 
     const auto frames = PelcoDFrame::splitStream(data);
     for (const auto& frame : frames) {

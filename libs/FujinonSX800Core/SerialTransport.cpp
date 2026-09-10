@@ -21,6 +21,7 @@
 #endif
 
 #include <chrono>
+#include <glog/logging.h>
 
 namespace FujinonSX800 {
 
@@ -106,10 +107,12 @@ bool SerialTransport::open()
     }
 
     if (port.empty()) {
+        LOG(ERROR) << "Cannot open serial port: port name is empty";
         notifyState(TransportState::Error, "Serial port name is empty");
         return false;
     }
 
+    LOG(INFO) << "Opening serial port '" << port << "' at " << m_baudRate << " baud";
     notifyState(TransportState::Connecting, "Opening " + port);
 
 #ifdef _WIN32
@@ -139,6 +142,7 @@ bool SerialTransport::open()
     const int fd = ::open(port.c_str(), O_RDWR | O_NOCTTY | O_NONBLOCK);
     if (fd < 0) {
         const std::string errStr = std::strerror(errno);
+        LOG(ERROR) << "Failed to open serial port '" << port << "': " << errStr;
         notifyState(TransportState::Error, "Failed to open " + port + ": " + errStr);
         return false;
     }
@@ -159,6 +163,7 @@ bool SerialTransport::open()
     m_running = true;
     m_readThread = std::thread(&SerialTransport::readWorker, this);
 
+    LOG(INFO) << "Serial port '" << port << "' opened and configured successfully";
     notifyState(TransportState::Connected, "Connected to " + port);
     return true;
 }
@@ -262,6 +267,7 @@ void SerialTransport::close()
     }
 
     if (m_handle != INVALID_SERIAL_HANDLE) {
+        LOG(INFO) << "Closing serial port";
 #ifdef _WIN32
         ::CloseHandle(m_handle);
 #else
@@ -318,7 +324,12 @@ bool SerialTransport::sendData(const std::vector<std::uint8_t>& data)
         }
     }
 
-    return totalWritten == toWrite;
+    if (totalWritten == toWrite) {
+        VLOG(1) << "Serial TX: " << totalWritten << " bytes";
+        return true;
+    }
+    LOG(WARNING) << "Serial TX incomplete: wrote " << totalWritten << " of " << toWrite << " bytes";
+    return false;
 #endif
 }
 

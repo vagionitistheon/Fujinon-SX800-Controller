@@ -2,6 +2,7 @@
 #include "ProtocolParser.h"
 
 #include <chrono>
+#include <glog/logging.h>
 
 namespace FujinonSX800 {
 
@@ -39,6 +40,8 @@ bool FujinonCamera::start()
         m_status.connected = true;
     }
 
+    LOG(INFO) << "Starting FujinonCamera controller (address: " << static_cast<int>(m_address) << ")";
+
     m_rxRing.clear();
     m_running = true;
     m_rxThread = std::thread(&FujinonCamera::rxLoop, this);
@@ -53,6 +56,7 @@ bool FujinonCamera::start()
 
 void FujinonCamera::stop()
 {
+    LOG(INFO) << "Stopping FujinonCamera controller";
     m_running = false;
     m_queueCv.notify_all();
     m_rxCv.notify_all();
@@ -146,6 +150,7 @@ void FujinonCamera::workerLoop()
                 m_lastQueryTag = item.queryTag;
             }
 
+            VLOG(1) << "Sending command (" << item.frame.size() << " bytes, tag: '" << item.queryTag << "')";
             m_transport->sendData(item.frame);
 
             // Notify TX callbacks
@@ -184,6 +189,7 @@ void FujinonCamera::pollingLoop()
 void FujinonCamera::onDataReceived(const std::vector<std::uint8_t>& data)
 {
     if (!data.empty()) {
+        VLOG(2) << "Writing " << data.size() << " bytes to RX ring buffer";
         m_rxRing.writeExact(data.data(), data.size());
         m_rxCv.notify_one();
     }
@@ -281,6 +287,7 @@ void FujinonCamera::dispatchFrame(const std::vector<std::uint8_t>& frame)
     }
 
     if (ProtocolParser::parsePacket(frame, updatedStatus, qTag)) {
+        VLOG(1) << "Packet parsed successfully, updating status (tag: '" << qTag << "')";
         {
             std::lock_guard<std::mutex> lock(m_statusMutex);
             m_status = updatedStatus;

@@ -66,10 +66,17 @@ void testMockIntegration()
     assert(!camera.isConnected());
 }
 
-int main()
+#include <glog/logging.h>
+
+int main([[maybe_unused]] int argc, char* argv[])
 {
+    google::InitGoogleLogging(argv[0]);
+    FLAGS_logtostderr = 1;
+    FLAGS_colorlogtostderr = true;
+
     testMockIntegration();
 
     std::cout << "[PASS] TestMockCamera completed successfully." << std::endl;
+    google::ShutdownGoogleLogging();
     return 0;
 }

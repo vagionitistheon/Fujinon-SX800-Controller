@@ -34,6 +34,9 @@
     #define IS_WOULDBLOCK() (errno == EAGAIN || errno == EWOULDBLOCK)
 #endif
 
+#include <chrono>
+#include <glog/logging.h>
+
 namespace FujinonSX800 {
 
 namespace {
@@ -152,10 +155,12 @@ bool TcpTransport::open()
     }
 
     if (host.empty()) {
+        LOG(ERROR) << "Cannot open TCP transport: host address is empty";
         notifyState(TransportState::Error, "Host address is empty");
         return false;
     }
 
+    LOG(INFO) << "Connecting to TCP host " << host << ":" << port;
     notifyState(TransportState::Connecting, "Connecting to " + host + ":" + std::to_string(port));
 
     struct addrinfo hints {};
@@ -167,6 +172,7 @@ bool TcpTransport::open()
     const std::string portStr = std::to_string(port);
     const int gaiErr = ::getaddrinfo(host.c_str(), portStr.c_str(), &hints, &res);
     if (gaiErr != 0 || res == nullptr) {
+        LOG(ERROR) << "DNS resolution failed for " << host << ": " << ::gai_strerror(gaiErr);
         notifyState(TransportState::Error, "DNS resolution failed for " + host);
         return false;
     }
@@ -238,6 +244,7 @@ bool TcpTransport::open()
     ::freeaddrinfo(res);
 
     if (connectedSock == InvalidSocket) {
+        LOG(ERROR) << "Failed to establish TCP connection to " << host << ":" << portStr;
         notifyState(TransportState::Error, "Failed to connect to " + host + ":" + portStr);
         return false;
     }
@@ -246,6 +253,7 @@ bool TcpTransport::open()
     m_running = true;
     m_readThread = std::thread(&TcpTransport::readWorker, this);
 
+    LOG(INFO) << "TCP connection established to " << host << ":" << portStr;
     notifyState(TransportState::Connected, "Connected to " + host + ":" + portStr);
     return true;
 }
@@ -267,6 +275,7 @@ void TcpTransport::close()
     }
 
     if (m_sockfd != InvalidSocket) {
+        LOG(INFO) << "Closing TCP socket";
         CLOSE_SOCKET(m_sockfd);
         m_sockfd = InvalidSocket;
         notifyState(TransportState::Disconnected, "Socket closed");
@@ -324,7 +333,12 @@ bool TcpTransport::sendData(const std::vector<std::uint8_t>& data)
         }
     }
 
-    return totalSent == toSend;
+    if (totalSent == toSend) {
+        VLOG(1) << "TCP TX: " << totalSent << " bytes";
+        return true;
+    }
+    LOG(WARNING) << "TCP TX incomplete: sent " << totalSent << " of " << toSend << " bytes";
+    return false;
 }
 
 void TcpTransport::setDataCallback(DataReceivedCallback callback)

@@ -7,9 +7,16 @@
 #include <QFile>
 #include <QIcon>
 #include <QStyleFactory>
+#include <glog/logging.h>
 
 int main(int argc, char* argv[])
 {
+    google::InitGoogleLogging(argv[0]);
+    FLAGS_logtostderr = 1;
+    FLAGS_colorlogtostderr = true;
+
+    LOG(INFO) << "Starting Fujinon SX800 Camera Controller (v2.12.0)";
+
     QApplication app(argc, argv);
     app.setApplicationName("FujinonSX800Controller");
     app.setApplicationVersion("2.12.0");
@@ -29,5 +36,8 @@ int main(int argc, char* argv[])
     FujinonSX800App::MainWindow mainWindow;
     mainWindow.show();
 
-    return app.exec();
+    const int retCode = app.exec();
+    LOG(INFO) << "Exiting Fujinon SX800 Camera Controller with code " << retCode;
+    google::ShutdownGoogleLogging();
+    return retCode;
 }

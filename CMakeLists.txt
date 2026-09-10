@@ -13,6 +13,7 @@ else()
 endif()
 
 find_package(Threads REQUIRED)
+find_package(glog REQUIRED)
 
 set(CMAKE_AUTOMOC ON)
 set(CMAKE_AUTORCC ON)
@@ -52,7 +53,10 @@ target_include_directories(FujinonSX800Core PUBLIC
     $<INSTALL_INTERFACE:include>
 )
 
-target_link_libraries(FujinonSX800Core PUBLIC Threads::Threads)
+target_link_libraries(FujinonSX800Core PUBLIC
+    Threads::Threads
+    glog::glog
+)
 if(WIN32)
     target_link_libraries(FujinonSX800Core PUBLIC ws2_32)
 endif()

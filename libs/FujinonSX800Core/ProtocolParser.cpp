@@ -2,6 +2,7 @@
 #include "OpticalTables.h"
 
 #include <cctype>
+#include <glog/logging.h>
 
 namespace FujinonSX800 {
 
@@ -11,8 +12,11 @@ bool ProtocolParser::parsePacket(
     std::string_view lastQuery) noexcept
 {
     if (!PelcoDFrame::isValidFrame(packet)) {
+        LOG(WARNING) << "ProtocolParser rejected invalid frame (checksum or format failure)";
         return false;
     }
+
+    VLOG(2) << "Parsing packet (" << packet.size() << " bytes), last query: '" << lastQuery << "'";
 
     if (packet.size() == PelcoDFrame::GeneralResponseSize) {
         return parseGeneralAck(packet, status);
@@ -24,6 +28,7 @@ bool ProtocolParser::parsePacket(
         return parseQueryResponse(packet, status, lastQuery);
     }
 
+    LOG(WARNING) << "Unhandled Pelco-D packet size: " << packet.size();
     return false;
 }
 
