@@ -1,0 +1,2 @@
+add_subdirectory(FujinonSX800Core)
+add_subdirectory(FujinonSX800Qt)
