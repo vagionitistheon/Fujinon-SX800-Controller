@@ -107,7 +107,6 @@ void testExtendedQueryResponses()
     const auto cTemp5000 = FujinonSX800::PelcoDFrame::createFrame(0x07U, 0xF0U, 0x3FU, 0x33U, 0x02U);
     SX800_TEST_ASSERT(FujinonSX800::ProtocolParser::parsePacket(cTemp5000, status));
     SX800_TEST_ASSERT(status.colorTemperatureKelvin == 5000U);
-    SX800_TEST_ASSERT(status.colorTempKelvin == 5000U);
 
     // 0x3F Image quality query response: d1=0x33 (Color Temperature), d2=0x01 (3000K)
     const auto cTemp3000 = FujinonSX800::PelcoDFrame::createFrame(0x07U, 0xF0U, 0x3FU, 0x33U, 0x01U);
@@ -122,12 +121,12 @@ void testExtendedQueryResponses()
     // 0xAF Manual setting query response: d1=0x25 (Zoom speed), d2=8
     const auto spdResp = FujinonSX800::PelcoDFrame::createFrame(0x07U, 0x00U, 0xAFU, 0x25U, 8U);
     SX800_TEST_ASSERT(FujinonSX800::ProtocolParser::parsePacket(spdResp, status));
-    SX800_TEST_ASSERT(status.zoomSpeedEx == 8U);
+    SX800_TEST_ASSERT(status.zoomSpeed == 8U);
 
     // 0xFF Fine settings query response: d1=0xEB (Fine brightness), d2=-5 (0xFB)
     const auto fineBrt = FujinonSX800::PelcoDFrame::createFrame(0x07U, 0xF0U, 0xFFU, 0xEBU, 0xFBU);
     SX800_TEST_ASSERT(FujinonSX800::ProtocolParser::parsePacket(fineBrt, status));
-    SX800_TEST_ASSERT(status.fineBrightness == -5);
+    SX800_TEST_ASSERT(status.brightnessFine == -5);
 }
 
 void testAllExtendedSpecResponses()
@@ -172,7 +171,7 @@ void testAllExtendedSpecResponses()
     // 0xF1, 0x2F: Speed Ex: d1=0x25, d2=0x09 (Zoom speed 9)
     const auto spdExResp = FujinonSX800::PelcoDFrame::createFrame(0x07U, 0xF1U, 0x2FU, 0x25U, 0x09U);
     SX800_TEST_ASSERT(FujinonSX800::ProtocolParser::parsePacket(spdExResp, status));
-    SX800_TEST_ASSERT(status.zoomSpeedEx == 9U);
+    SX800_TEST_ASSERT(status.zoomSpeed == 9U);
 }
 
 int main()

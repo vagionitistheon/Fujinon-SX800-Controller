@@ -65,7 +65,7 @@ void OsdVideoView::render(Canvas& canvas, const FujinonSX800::CameraStatus& stat
     canvas.drawString(24, top + 9, status.centerPositionDisplay ? "[ACTIVE]" : "[OFF]", valueStyle);
 
     canvas.drawString(4, top + 11, "Antialiasing Filter:", labelStyle);
-    canvas.drawString(24, top + 11, status.osdAntialiasing ? "[ENABLED]" : "[DISABLED]", valueStyle);
+    canvas.drawString(24, top + 11, status.antialiasingEnabled ? "[ENABLED]" : "[DISABLED]", valueStyle);
 
     // ==================== 2. VIDEO STANDARDS & RTC (RIGHT) ====================
     const int rightX = 4 + colW;

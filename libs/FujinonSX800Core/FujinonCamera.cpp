@@ -11,7 +11,7 @@ FujinonCamera::FujinonCamera(std::shared_ptr<ITransport> transport, std::uint8_t
     , m_builder { address }
     , m_address { address }
 {
-    m_status.address = address;
+    m_status.rs485Address = address;
 }
 
 FujinonCamera::~FujinonCamera()
@@ -35,7 +35,7 @@ bool FujinonCamera::start()
 
     {
         std::lock_guard<std::mutex> lock(m_statusMutex);
-        m_status.connected = true;
+        m_status.isConnected = true;
     }
 
     LOG(INFO) << "Starting FujinonCamera controller (address: " << static_cast<int>(m_address) << ")";
@@ -81,7 +81,7 @@ void FujinonCamera::stop()
 
     {
         std::lock_guard<std::mutex> lock(m_statusMutex);
-        m_status.connected = false;
+        m_status.isConnected = false;
     }
 }
 
@@ -95,7 +95,7 @@ void FujinonCamera::setAddress(std::uint8_t address)
     m_address = address;
     m_builder.setAddress(address);
     std::lock_guard<std::mutex> lock(m_statusMutex);
-    m_status.address = address;
+    m_status.rs485Address = address;
 }
 
 std::uint8_t FujinonCamera::getAddress() const noexcept

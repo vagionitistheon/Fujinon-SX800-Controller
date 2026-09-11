@@ -382,7 +382,7 @@ void OpticsTab::updateTelemetry(const FujinonSX800::CameraStatus& status)
     if (!sliderFocusPos->isSliderDown()) {
         sliderFocusPos->setValue(status.focusPosition);
     }
-    lblDistance->setText(QString("%1 m").arg(status.subjectDistanceM, 0, 'f', 1));
+    lblDistance->setText(QString("%1 m").arg(status.focusDistanceM, 0, 'f', 1));
 
     chkAutoFocus->setChecked(status.autoFocusMode == FujinonSX800::AutoFocusMode::On);
     chkAutoIris->setChecked(status.autoIrisMode == FujinonSX800::AutoIrisMode::On);

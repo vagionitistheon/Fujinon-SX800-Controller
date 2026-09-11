@@ -51,8 +51,8 @@ void ImageQualityView::render(Canvas& canvas, const FujinonSX800::CameraStatus& 
     drawParamBar(top + 8, "Sharpness:", status.sharpness, -5, 5);
 
     canvas.drawString(4, top + 10, "Fine Color Offsets:", labelStyle);
-    drawParamBar(top + 12, "WB Red Shift:", status.wbRedShift, -5, 5);
-    drawParamBar(top + 14, "WB Blue Shift:", status.wbBlueShift, -5, 5);
+    drawParamBar(top + 12, "WB Red Shift:", status.wbShiftRedFine, -5, 5);
+    drawParamBar(top + 14, "WB Blue Shift:", status.wbShiftBlueFine, -5, 5);
 
     // ==================== 2. ENHANCEMENT & PROCESSING (RIGHT) ====================
     const int rightX = 4 + colW;
