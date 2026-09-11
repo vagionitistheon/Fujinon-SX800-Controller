@@ -3,9 +3,9 @@
 
 #include "FujinonSX800Core/FujinonCamera.h"
 #include "FujinonSX800Core/MockCameraDevice.h"
+#include "TestHelper.h"
 
 #include <atomic>
-#include <cassert>
 #include <chrono>
 #include <iostream>
 #include <thread>
@@ -23,8 +23,9 @@ void testMockIntegration()
     });
 
     camera.setAutoQueryOnConnect(true);
-    assert(camera.start());
-    assert(camera.isConnected());
+    const bool started = camera.start();
+    SX800_TEST_ASSERT(started);
+    SX800_TEST_ASSERT(camera.isConnected());
 
     // Allow worker to query initial status
     for (int i = 0; i < 50; ++i) {
@@ -34,11 +35,11 @@ void testMockIntegration()
         std::this_thread::sleep_for(std::chrono::milliseconds(20));
     }
 
-    assert(gotStatusUpdate);
+    SX800_TEST_ASSERT(gotStatusUpdate);
     const auto status = camera.getStatus();
-    assert(status.serialNumber == "SX800999");
-    assert(status.fwVersionMajor == 2U && status.fwVersionMinor == 12U);
-    assert(status.rs485Address == 0x07U);
+    SX800_TEST_ASSERT(status.serialNumber == "SX800999");
+    SX800_TEST_ASSERT(status.fwVersionMajor == 2U && status.fwVersionMinor == 12U);
+    SX800_TEST_ASSERT(status.rs485Address == 0x07U);
 
     // Test commanding zoom position
     camera.setZoomPosition(12345U);
@@ -50,7 +51,7 @@ void testMockIntegration()
         }
         std::this_thread::sleep_for(std::chrono::milliseconds(20));
     }
-    assert(zoomApplied);
+    SX800_TEST_ASSERT(zoomApplied);
 
     // Test setting defog mode
     camera.setDefog(FujinonSX800::DefogMode::High);
@@ -62,7 +63,7 @@ void testMockIntegration()
         }
         std::this_thread::sleep_for(std::chrono::milliseconds(20));
     }
-    assert(defogApplied);
+    SX800_TEST_ASSERT(defogApplied);
 
     // Test query response timeout
     std::atomic<bool> timeoutTriggered { false };
@@ -81,11 +82,11 @@ void testMockIntegration()
         }
         std::this_thread::sleep_for(std::chrono::milliseconds(10));
     }
-    assert(timeoutTriggered.load());
-    assert(timedOutTag == "TestQuery");
+    SX800_TEST_ASSERT(timeoutTriggered.load());
+    SX800_TEST_ASSERT(timedOutTag == "TestQuery");
 
     camera.stop();
-    assert(!camera.isConnected());
+    SX800_TEST_ASSERT(!camera.isConnected());
 }
 
 #include <glog/logging.h>

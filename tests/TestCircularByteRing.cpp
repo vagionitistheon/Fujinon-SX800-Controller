@@ -4,9 +4,9 @@
  */
 
 #include "CircularByteRing.h"
+#include "TestHelper.h"
 
 #include <atomic>
-#include <cassert>
 #include <chrono>
 #include <iostream>
 #include <thread>
@@ -17,28 +17,31 @@ using namespace FujinonSX800;
 static void testBasicOperations()
 {
     CircularByteRing<1024> ring;
-    assert(ring.capacity() == 1024);
-    assert(ring.availableRead() == 0);
-    assert(ring.availableWrite() == 1024);
+    SX800_TEST_ASSERT(ring.capacity() == 1024);
+    SX800_TEST_ASSERT(ring.availableRead() == 0);
+    SX800_TEST_ASSERT(ring.availableWrite() == 1024);
 
     const std::vector<std::uint8_t> testData = { 0xAA, 0xBB, 0xCC, 0xDD, 0xEE };
-    assert(ring.writeExact(testData.data(), testData.size()));
-    assert(ring.availableRead() == 5);
-    assert(ring.availableWrite() == 1019);
+    const bool writeOk = ring.writeExact(testData.data(), testData.size());
+    SX800_TEST_ASSERT(writeOk);
+    SX800_TEST_ASSERT(ring.availableRead() == 5);
+    SX800_TEST_ASSERT(ring.availableWrite() == 1019);
 
     std::uint8_t peekBuf[5] = {};
-    assert(ring.peekBytes(peekBuf, 5));
+    const bool peekOk = ring.peekBytes(peekBuf, 5);
+    SX800_TEST_ASSERT(peekOk);
     for (std::size_t i = 0; i < 5; ++i) {
-        assert(peekBuf[i] == testData[i]);
+        SX800_TEST_ASSERT(peekBuf[i] == testData[i]);
     }
-    assert(ring.availableRead() == 5); // Read position unchanged
+    SX800_TEST_ASSERT(ring.availableRead() == 5); // Read position unchanged
 
     std::uint8_t readBuf[5] = {};
-    assert(ring.readExact(readBuf, 5));
+    const bool readOk = ring.readExact(readBuf, 5);
+    SX800_TEST_ASSERT(readOk);
     for (std::size_t i = 0; i < 5; ++i) {
-        assert(readBuf[i] == testData[i]);
+        SX800_TEST_ASSERT(readBuf[i] == testData[i]);
     }
-    assert(ring.availableRead() == 0);
+    SX800_TEST_ASSERT(ring.availableRead() == 0);
     std::cout << "[PASS] testBasicOperations\n";
 }
 
@@ -48,33 +51,37 @@ static void testWrapAround()
 
     // Write 12 bytes
     std::vector<std::uint8_t> chunk1 = { 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12 };
-    assert(ring.writeExact(chunk1.data(), chunk1.size()));
+    const bool write1Ok = ring.writeExact(chunk1.data(), chunk1.size());
+    SX800_TEST_ASSERT(write1Ok);
 
     // Read 8 bytes (advancing head to index 8)
     std::uint8_t readBuf[8] = {};
-    assert(ring.readExact(readBuf, 8));
-    assert(ring.availableRead() == 4);
+    const bool read1Ok = ring.readExact(readBuf, 8);
+    SX800_TEST_ASSERT(read1Ok);
+    SX800_TEST_ASSERT(ring.availableRead() == 4);
 
     // Now write 10 bytes -> will wrap around index 16
     std::vector<std::uint8_t> chunk2 = { 13, 14, 15, 16, 17, 18, 19, 20, 21, 22 };
-    assert(ring.writeExact(chunk2.data(), chunk2.size()));
-    assert(ring.availableRead() == 14);
+    const bool write2Ok = ring.writeExact(chunk2.data(), chunk2.size());
+    SX800_TEST_ASSERT(write2Ok);
+    SX800_TEST_ASSERT(ring.availableRead() == 14);
 
     // Verify ReadView spans both contiguous regions
     const auto readView = ring.getReadView();
-    assert(readView.first.size > 0);
-    assert(readView.second.size > 0);
-    assert(readView.totalSize() == 14);
+    SX800_TEST_ASSERT(readView.first.size > 0);
+    SX800_TEST_ASSERT(readView.second.size > 0);
+    SX800_TEST_ASSERT(readView.totalSize() == 14);
 
     // Read all 14 bytes and verify content
     std::uint8_t allBuf[14] = {};
-    assert(ring.readExact(allBuf, 14));
-    assert(allBuf[0] == 9);
-    assert(allBuf[3] == 12);
-    assert(allBuf[4] == 13);
-    assert(allBuf[13] == 22);
+    const bool readAllOk = ring.readExact(allBuf, 14);
+    SX800_TEST_ASSERT(readAllOk);
+    SX800_TEST_ASSERT(allBuf[0] == 9);
+    SX800_TEST_ASSERT(allBuf[3] == 12);
+    SX800_TEST_ASSERT(allBuf[4] == 13);
+    SX800_TEST_ASSERT(allBuf[13] == 22);
 
-    assert(ring.availableRead() == 0);
+    SX800_TEST_ASSERT(ring.availableRead() == 0);
     std::cout << "[PASS] testWrapAround\n";
 }
 
@@ -84,20 +91,22 @@ static void testFindByte()
 
     // Fill partially, consume partially to position head near end
     std::vector<std::uint8_t> pad(24, 0x00);
-    assert(ring.writeExact(pad.data(), pad.size()));
+    const bool writePadOk = ring.writeExact(pad.data(), pad.size());
+    SX800_TEST_ASSERT(writePadOk);
     ring.advanceRead(24);
 
     // Write bytes wrapping around: 0x01, 0x02, 0xFF (delimiter!), 0x03
     std::vector<std::uint8_t> data = { 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0xFF, 0x09, 0x0A };
-    assert(ring.writeExact(data.data(), data.size()));
+    const bool writeDataOk = ring.writeExact(data.data(), data.size());
+    SX800_TEST_ASSERT(writeDataOk);
 
     // Find 0xFF
     const std::size_t foundIdx = ring.findByte(0xFF);
-    assert(foundIdx == 8);
+    SX800_TEST_ASSERT(foundIdx == 8);
 
     // Find non-existent
     const std::size_t missingIdx = ring.findByte(0xEE);
-    assert(missingIdx == decltype(ring)::npos);
+    SX800_TEST_ASSERT(missingIdx == decltype(ring)::npos);
 
     std::cout << "[PASS] testFindByte\n";
 }
@@ -146,7 +155,7 @@ static void testConcurrentSpsc()
         const std::size_t toRead = std::min<std::size_t>(avail, recvBuf.size());
         if (ring.readExact(recvBuf.data(), toRead)) {
             for (std::size_t i = 0; i < toRead; ++i) {
-                assert(recvBuf[i] == expectedVal);
+                SX800_TEST_ASSERT(recvBuf[i] == expectedVal);
                 ++expectedVal;
             }
             bytesRead += toRead;
@@ -154,8 +163,8 @@ static void testConcurrentSpsc()
     }
 
     producer.join();
-    assert(bytesRead == TotalBytes);
-    assert(ring.availableRead() == 0);
+    SX800_TEST_ASSERT(bytesRead == TotalBytes);
+    SX800_TEST_ASSERT(ring.availableRead() == 0);
     std::cout << "[PASS] testConcurrentSpsc (" << (TotalBytes / (1024 * 1024)) << " MB verified)\n";
 }
 

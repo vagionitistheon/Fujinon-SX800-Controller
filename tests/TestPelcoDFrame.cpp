@@ -2,8 +2,8 @@
 /// @brief Unit tests for Pelco-D checksum and stream framing.
 
 #include "FujinonSX800Core/PelcoDFrame.h"
+#include "TestHelper.h"
 
-#include <cassert>
 #include <iostream>
 #include <vector>
 
@@ -12,26 +12,26 @@ void testChecksum()
     // Test known Pelco-D vector: [Addr=0x01, Cmd1=0x00, Cmd2=0x20, Data1=0x00, Data2=0x00] -> Sum = 0x21
     const std::vector<std::uint8_t> payload { 0x01U, 0x00U, 0x20U, 0x00U, 0x00U };
     const std::uint8_t cksm = FujinonSX800::PelcoDFrame::calculateChecksum(payload);
-    assert(cksm == 0x21U);
+    SX800_TEST_ASSERT(cksm == 0x21U);
 
     // Overflow test (modulo 256)
     const std::vector<std::uint8_t> overflowPayload { 0xFFU, 0x02U, 0x00U, 0x00U, 0x00U };
-    assert(FujinonSX800::PelcoDFrame::calculateChecksum(overflowPayload) == 0x01U);
+    SX800_TEST_ASSERT(FujinonSX800::PelcoDFrame::calculateChecksum(overflowPayload) == 0x01U);
 }
 
 void testValidFrames()
 {
     // 4-byte general response
     const std::vector<std::uint8_t> valid4 { 0xFFU, 0x07U, 0x00U, 0x07U };
-    assert(FujinonSX800::PelcoDFrame::isValidFrame(valid4));
+    SX800_TEST_ASSERT(FujinonSX800::PelcoDFrame::isValidFrame(valid4));
 
     const std::vector<std::uint8_t> invalid4 { 0xFFU, 0x07U, 0x00U, 0x08U };
-    assert(!FujinonSX800::PelcoDFrame::isValidFrame(invalid4));
+    SX800_TEST_ASSERT(!FujinonSX800::PelcoDFrame::isValidFrame(invalid4));
 
     // 7-byte extended frame
     const auto valid7 = FujinonSX800::PelcoDFrame::createFrame(0x07U, 0x00U, 0x20U, 0x00U, 0x00U);
-    assert(valid7.size() == 7U);
-    assert(FujinonSX800::PelcoDFrame::isValidFrame(valid7));
+    SX800_TEST_ASSERT(valid7.size() == 7U);
+    SX800_TEST_ASSERT(FujinonSX800::PelcoDFrame::isValidFrame(valid7));
 
     // 18-byte query frame
     std::vector<std::uint8_t> valid18(18U, 0x00U);
@@ -43,7 +43,7 @@ void testValidFrames()
     valid18[5] = '0';
     valid18[6] = '0';
     valid18[17] = FujinonSX800::PelcoDFrame::calculateChecksum(&valid18[1], 16U);
-    assert(FujinonSX800::PelcoDFrame::isValidFrame(valid18));
+    SX800_TEST_ASSERT(FujinonSX800::PelcoDFrame::isValidFrame(valid18));
 }
 
 void testStreamSplitting()
@@ -62,9 +62,9 @@ void testStreamSplitting()
     stream.push_back(0xBBU);
 
     const auto split = FujinonSX800::PelcoDFrame::splitStream(stream);
-    assert(split.size() == 2U);
-    assert(split[0] == frame1);
-    assert(split[1] == frame2);
+    SX800_TEST_ASSERT(split.size() == 2U);
+    SX800_TEST_ASSERT(split[0] == frame1);
+    SX800_TEST_ASSERT(split[1] == frame2);
 }
 
 int main()
