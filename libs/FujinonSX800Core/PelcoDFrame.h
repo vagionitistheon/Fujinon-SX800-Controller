@@ -39,6 +39,11 @@ public:
     [[nodiscard]] static std::vector<std::uint8_t> createFrame(
         std::uint8_t address, std::uint8_t cmd1, std::uint8_t cmd2, std::uint8_t data1, std::uint8_t data2);
 
+    /// @brief Checks if a byte is a valid Pelco-D command or response opcode prefix.
+    /// @param[in] cmd1 Command 1 or Response 1 byte (frame index 2).
+    /// @return True if cmd1 is a recognized standard or extended opcode.
+    [[nodiscard]] static bool isValidOpcode(std::uint8_t cmd1) noexcept;
+
     /// @brief Validates checksum for a complete frame (4-byte, 7-byte, or 18-byte).
     /// @param[in] frame Complete frame starting with 0xFF.
     /// @return True if length and checksum match protocol rules.

@@ -133,6 +133,7 @@ private:
     void onDataReceived(const std::uint8_t* data, std::size_t size);
     void dispatchFrame(const std::vector<std::uint8_t>& frame);
     void checkQueryTimeout();
+    [[nodiscard]] static bool is18ByteQuery(std::string_view tag) noexcept;
 
     struct CommandItem {
         std::vector<std::uint8_t> frame;

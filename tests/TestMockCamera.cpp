@@ -89,6 +89,112 @@ void testMockIntegration()
     SX800_TEST_ASSERT(!camera.isConnected());
 }
 
+class FragmentedMockTransport : public FujinonSX800::ITransport {
+public:
+    explicit FragmentedMockTransport(std::uint8_t address = 7U)
+        : m_address { address }
+    {
+    }
+
+    bool open() override
+    {
+        m_open = true;
+        return true;
+    }
+
+    void close() override
+    {
+        m_open = false;
+    }
+
+    bool isOpen() const noexcept override
+    {
+        return m_open.load();
+    }
+
+    bool sendData(const std::vector<std::uint8_t>& data) override
+    {
+        if (data.size() == 7U && data[2] == 0x00U && (data[3] == 0x89U || data[3] == 0x7BU)) {
+            // Craft 18-byte response where the first 7 bytes collide with a valid 7-byte checksum:
+            // sum(0x07, 'S'(83), 'X'(88), '8'(56), 'c'(99)) == 333 == 256 + 77 ('M')
+            // Byte 6 is 'M' (0x4D), matching the 7-byte checksum while being printable ASCII.
+            std::vector<std::uint8_t> fullFrame(18U, 0x00U);
+            fullFrame[0] = FujinonSX800::PelcoDFrame::SyncByte;
+            fullFrame[1] = m_address;
+            fullFrame[2] = 'S';
+            fullFrame[3] = 'X';
+            fullFrame[4] = '8';
+            fullFrame[5] = 'c';
+            fullFrame[6] = 'M';
+            fullFrame[7] = '0';
+            fullFrame[8] = '1';
+            fullFrame[9] = '2';
+            fullFrame[17] = FujinonSX800::PelcoDFrame::calculateChecksum(&fullFrame[1], 16U);
+
+            // Send fragment 1: first 7 bytes
+            if (m_dataCallback) {
+                m_dataCallback(fullFrame.data(), 7U);
+            }
+
+            // Small delay to simulate packet fragmentation across network segments
+            std::this_thread::sleep_for(std::chrono::milliseconds(15));
+
+            // Send fragment 2: remaining 11 bytes
+            if (m_dataCallback) {
+                m_dataCallback(fullFrame.data() + 7U, 11U);
+            }
+        }
+        return true;
+    }
+
+    void setDataCallback(DataReceivedCallback callback) override
+    {
+        m_dataCallback = std::move(callback);
+    }
+
+    void setStateCallback(StateChangedCallback callback) override
+    {
+        m_stateCallback = std::move(callback);
+    }
+
+private:
+    std::uint8_t m_address { 7U };
+    std::atomic<bool> m_open { false };
+    DataReceivedCallback m_dataCallback;
+    StateChangedCallback m_stateCallback;
+};
+
+void testFragmentedSerialResponse()
+{
+    auto mockTransport = std::make_shared<FragmentedMockTransport>(0x07U);
+    FujinonSX800::FujinonCamera camera(mockTransport, 0x07U);
+
+    std::atomic<bool> gotSerial { false };
+    camera.addStatusCallback([&](const FujinonSX800::CameraStatus& status) {
+        if (!status.serialNumber.empty()) {
+            gotSerial = true;
+        }
+    });
+
+    const bool started = camera.start();
+    SX800_TEST_ASSERT(started);
+
+    FujinonSX800::ProtocolBuilder builder(0x07U);
+    camera.sendQueryFrame(builder.buildQuerySerialNumber(), "QuerySerial");
+
+    for (int i = 0; i < 50; ++i) {
+        if (gotSerial.load()) {
+            break;
+        }
+        std::this_thread::sleep_for(std::chrono::milliseconds(20));
+    }
+
+    SX800_TEST_ASSERT(gotSerial.load());
+    SX800_TEST_ASSERT(camera.getStatus().serialNumber.rfind("SX8c", 0) == 0);
+
+    camera.stop();
+}
+
 #include <glog/logging.h>
 
 int main([[maybe_unused]] int argc, char* argv[])
@@ -98,6 +204,7 @@ int main([[maybe_unused]] int argc, char* argv[])
     FLAGS_colorlogtostderr = true;
 
     testMockIntegration();
+    testFragmentedSerialResponse();
 
     std::cout << "[PASS] TestMockCamera completed successfully." << std::endl;
     google::ShutdownGoogleLogging();

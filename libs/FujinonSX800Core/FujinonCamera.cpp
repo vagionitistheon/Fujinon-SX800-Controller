@@ -164,6 +164,7 @@ void FujinonCamera::checkQueryTimeout()
     if (elapsed >= static_cast<long long>(m_queryTimeoutMs)) {
         m_awaitingResponse = false;
         m_responseCv.notify_all();
+        m_rxCv.notify_one();
         std::string tag;
         {
             std::lock_guard<std::mutex> lock(m_statusMutex);
@@ -296,13 +297,32 @@ void FujinonCamera::onDataReceived(const std::uint8_t* data, std::size_t size)
     }
 }
 
+bool FujinonCamera::is18ByteQuery(std::string_view tag) noexcept
+{
+    return tag == "QuerySerial";
+}
+
 void FujinonCamera::rxLoop()
 {
     while (m_running) {
         {
             std::unique_lock<std::mutex> lock(m_rxMutex);
-            m_rxCv.wait_for(lock, std::chrono::milliseconds(50),
-                [this] { return m_rxRing.availableRead() >= PelcoDFrame::GeneralResponseSize || !m_running; });
+            m_rxCv.wait_for(lock, std::chrono::milliseconds(50), [this] {
+                if (!m_running) {
+                    return true;
+                }
+                const std::size_t avail = m_rxRing.availableRead();
+                if (avail == 0U) {
+                    return false;
+                }
+                if (m_awaitingResponse.load(std::memory_order_relaxed)) {
+                    std::lock_guard<std::mutex> statusLock(m_statusMutex);
+                    if (m_awaitingResponse.load(std::memory_order_relaxed) && is18ByteQuery(m_pendingQueryTag)) {
+                        return avail >= PelcoDFrame::QueryResponseSize;
+                    }
+                }
+                return avail >= PelcoDFrame::GeneralResponseSize;
+            });
         }
 
         if (!m_running) {
@@ -325,6 +345,20 @@ void FujinonCamera::rxLoop()
                 break;
             }
 
+            bool awaiting18ByteQuery { false };
+            bool awaitingAnyQuery { false };
+            if (m_awaitingResponse.load(std::memory_order_relaxed)) {
+                std::lock_guard<std::mutex> lock(m_statusMutex);
+                if (m_awaitingResponse.load(std::memory_order_relaxed)) {
+                    awaitingAnyQuery = true;
+                    awaiting18ByteQuery = is18ByteQuery(m_pendingQueryTag);
+                }
+            }
+
+            if (awaiting18ByteQuery && available < PelcoDFrame::QueryResponseSize) {
+                break;
+            }
+
             constexpr std::size_t candidateSizes[]
                 = { PelcoDFrame::QueryResponseSize, PelcoDFrame::StandardFrameSize, PelcoDFrame::GeneralResponseSize };
 
@@ -332,8 +366,23 @@ void FujinonCamera::rxLoop()
             std::array<std::uint8_t, PelcoDFrame::QueryResponseSize> peekBuf {};
 
             for (const std::size_t candidateSize : candidateSizes) {
+                if (awaiting18ByteQuery && candidateSize < PelcoDFrame::QueryResponseSize) {
+                    continue;
+                }
+                if (awaitingAnyQuery && candidateSize == PelcoDFrame::GeneralResponseSize) {
+                    continue;
+                }
+
                 if (available >= candidateSize) {
                     if (m_rxRing.peekBytes(peekBuf.data(), candidateSize)) {
+                        if (candidateSize == PelcoDFrame::GeneralResponseSize && peekBuf[2] != 0x00U) {
+                            continue;
+                        }
+                        if (candidateSize == PelcoDFrame::StandardFrameSize
+                            && !PelcoDFrame::isValidOpcode(peekBuf[2])) {
+                            continue;
+                        }
+
                         const std::uint8_t expectedCksm = peekBuf[candidateSize - 1U];
                         const std::uint8_t computedCksm
                             = PelcoDFrame::calculateChecksum(&peekBuf[1], candidateSize - 2U);

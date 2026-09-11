@@ -28,10 +28,18 @@ void testValidFrames()
     const std::vector<std::uint8_t> invalid4 { 0xFFU, 0x07U, 0x00U, 0x08U };
     SX800_TEST_ASSERT(!FujinonSX800::PelcoDFrame::isValidFrame(invalid4));
 
+    // 4-byte checksum alias: byte[1] + byte[2] == checksum, but byte[2] != 0x00
+    const std::vector<std::uint8_t> aliased4 { 0xFFU, 0x07U, 0x05U, 0x0CU };
+    SX800_TEST_ASSERT(!FujinonSX800::PelcoDFrame::isValidFrame(aliased4));
+
     // 7-byte extended frame
     const auto valid7 = FujinonSX800::PelcoDFrame::createFrame(0x07U, 0x00U, 0x20U, 0x00U, 0x00U);
     SX800_TEST_ASSERT(valid7.size() == 7U);
     SX800_TEST_ASSERT(FujinonSX800::PelcoDFrame::isValidFrame(valid7));
+
+    // 7-byte checksum alias: valid checksum over 5 bytes, but byte[2] is not a valid opcode (e.g., 'S' = 0x53)
+    const std::vector<std::uint8_t> aliased7 { 0xFFU, 0x07U, 0x53U, 0x58U, 0x38U, 0x30U, 0x1AU };
+    SX800_TEST_ASSERT(!FujinonSX800::PelcoDFrame::isValidFrame(aliased7));
 
     // 18-byte query frame
     std::vector<std::uint8_t> valid18(18U, 0x00U);
@@ -65,6 +73,11 @@ void testStreamSplitting()
     SX800_TEST_ASSERT(split.size() == 2U);
     SX800_TEST_ASSERT(split[0] == frame1);
     SX800_TEST_ASSERT(split[1] == frame2);
+
+    // Stream with aliased 7-byte fragment where checksum matches but byte[2] is not an opcode
+    const std::vector<std::uint8_t> aliasedFragmentStream { 0xFFU, 0x07U, 0x53U, 0x58U, 0x38U, 0x30U, 0x1AU };
+    const auto splitAliased = FujinonSX800::PelcoDFrame::splitStream(aliasedFragmentStream);
+    SX800_TEST_ASSERT(splitAliased.empty());
 }
 
 int main()
