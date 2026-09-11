@@ -58,6 +58,8 @@ if(CLANG_FORMAT_BIN)
         "${CMAKE_SOURCE_DIR}/libs/*.h"
         "${CMAKE_SOURCE_DIR}/app-qt/*.cpp"
         "${CMAKE_SOURCE_DIR}/app-qt/*.h"
+        "${CMAKE_SOURCE_DIR}/app-tui/*.cpp"
+        "${CMAKE_SOURCE_DIR}/app-tui/*.h"
         "${CMAKE_SOURCE_DIR}/tests/*.cpp"
         "${CMAKE_SOURCE_DIR}/tests/*.h"
     )

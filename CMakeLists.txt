@@ -19,12 +19,17 @@ set(CMAKE_AUTOUIC ON)
 
 find_package(Qt6 REQUIRED COMPONENTS Core Gui Widgets Test)
 
-# Option to toggle unit tests
+# Options
 option(BUILD_TESTING "Build automated unit tests" ON)
+option(BUILD_TUI "Build Terminal User Interface (TUI) application" ON)
 
 # Subdirectories
 add_subdirectory(libs)
 add_subdirectory(app-qt)
+
+if(BUILD_TUI)
+    add_subdirectory(app-tui)
+endif()
 
 if(BUILD_TESTING)
     enable_testing()
