@@ -168,6 +168,43 @@ static void testConcurrentSpsc()
     std::cout << "[PASS] testConcurrentSpsc (" << (TotalBytes / (1024 * 1024)) << " MB verified)\n";
 }
 
+static void testOverflowBehavior()
+{
+    CircularByteRing<32> ring;
+    SX800_TEST_ASSERT(ring.capacity() == 32);
+    SX800_TEST_ASSERT(ring.availableWrite() == 32);
+
+    // 1. Fill 28 bytes -> 4 bytes left
+    const std::vector<std::uint8_t> chunk1(28, 0x11);
+    SX800_TEST_ASSERT(ring.writeExact(chunk1.data(), chunk1.size()));
+    SX800_TEST_ASSERT(ring.availableRead() == 28);
+    SX800_TEST_ASSERT(ring.availableWrite() == 4);
+
+    // 2. Attempt to write 8 bytes -> must fail because 8 > 4 available
+    const std::vector<std::uint8_t> overflowChunk(8, 0x22);
+    const bool overflowOk = ring.writeExact(overflowChunk.data(), overflowChunk.size());
+    SX800_TEST_ASSERT(!overflowOk);
+
+    // 3. Verify ring state unaltered: availableRead still 28, availableWrite still 4
+    SX800_TEST_ASSERT(ring.availableRead() == 28);
+    SX800_TEST_ASSERT(ring.availableWrite() == 4);
+
+    // 4. Verify data in buffer remains uncorrupted
+    std::vector<std::uint8_t> readBuf(28, 0x00);
+    SX800_TEST_ASSERT(ring.readExact(readBuf.data(), 28));
+    for (std::size_t i = 0; i < 28; ++i) {
+        SX800_TEST_ASSERT(readBuf[i] == 0x11);
+    }
+    SX800_TEST_ASSERT(ring.availableRead() == 0);
+    SX800_TEST_ASSERT(ring.availableWrite() == 32);
+
+    // 5. Subsequent write succeeds after draining
+    SX800_TEST_ASSERT(ring.writeExact(overflowChunk.data(), overflowChunk.size()));
+    SX800_TEST_ASSERT(ring.availableRead() == 8);
+
+    std::cout << "[PASS] testOverflowBehavior\n";
+}
+
 int main()
 {
     std::cout << "Starting SPSC CircularByteRing Tests...\n";
@@ -175,6 +212,7 @@ int main()
     testWrapAround();
     testFindByte();
     testConcurrentSpsc();
+    testOverflowBehavior();
     std::cout << "All SPSC CircularByteRing Tests PASSED!\n";
     return 0;
 }

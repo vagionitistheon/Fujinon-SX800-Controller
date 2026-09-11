@@ -127,6 +127,7 @@ public:
     void setTermination(bool enable);
     void reboot();
     void factoryReset();
+    [[nodiscard]] std::uint64_t rxOverflowDrops() const noexcept;
 
 private:
     void enqueueCommand(const std::vector<std::uint8_t>& frame, std::string queryTag = "");
@@ -159,6 +160,7 @@ private:
     CircularByteRing<65536> m_rxRing;
     std::mutex m_rxMutex;
     std::condition_variable m_rxCv;
+    std::atomic<std::uint64_t> m_rxOverflowDrops { 0U };
 
     bool m_autoQueryOnConnect { false };
     bool m_telemetryPolling { false };

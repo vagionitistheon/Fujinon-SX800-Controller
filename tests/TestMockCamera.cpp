@@ -195,6 +195,64 @@ void testFragmentedSerialResponse()
     camera.stop();
 }
 
+void testRxOverflowTracking()
+{
+    class OverflowTransport : public FujinonSX800::ITransport {
+    public:
+        [[nodiscard]] bool open() override
+        {
+            m_open = true;
+            return true;
+        }
+        void close() override
+        {
+            m_open = false;
+        }
+        [[nodiscard]] bool isOpen() const noexcept override
+        {
+            return m_open;
+        }
+        [[nodiscard]] bool sendData([[maybe_unused]] const std::vector<std::uint8_t>& data) override
+        {
+            return true;
+        }
+        void setDataCallback(DataReceivedCallback callback) override
+        {
+            m_dataCallback = std::move(callback);
+        }
+        void setStateCallback(StateChangedCallback callback) override
+        {
+            m_stateCallback = std::move(callback);
+        }
+        void triggerData(const std::uint8_t* data, std::size_t size)
+        {
+            if (m_dataCallback) {
+                m_dataCallback(data, size);
+            }
+        }
+
+    private:
+        bool m_open { false };
+        DataReceivedCallback m_dataCallback;
+        StateChangedCallback m_stateCallback;
+    };
+
+    auto transport = std::make_shared<OverflowTransport>();
+    FujinonSX800::FujinonCamera camera(transport, 0x07U);
+    SX800_TEST_ASSERT(camera.rxOverflowDrops() == 0ULL);
+
+    const bool started = camera.start();
+    SX800_TEST_ASSERT(started);
+
+    // Trigger chunk exceeding the 64 KiB ring buffer capacity
+    const std::vector<std::uint8_t> hugeChunk(70000U, 0x00U);
+    transport->triggerData(hugeChunk.data(), hugeChunk.size());
+
+    SX800_TEST_ASSERT(camera.rxOverflowDrops() == 70000ULL);
+
+    camera.stop();
+}
+
 #include <glog/logging.h>
 
 int main([[maybe_unused]] int argc, char* argv[])
@@ -205,6 +263,7 @@ int main([[maybe_unused]] int argc, char* argv[])
 
     testMockIntegration();
     testFragmentedSerialResponse();
+    testRxOverflowTracking();
 
     std::cout << "[PASS] TestMockCamera completed successfully." << std::endl;
     google::ShutdownGoogleLogging();

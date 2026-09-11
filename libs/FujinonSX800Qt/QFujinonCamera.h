@@ -32,6 +32,7 @@ public:
     [[nodiscard]] bool isConnected() const noexcept;
     [[nodiscard]] FujinonSX800::CameraStatus currentStatus() const;
     [[nodiscard]] FujinonSX800::FujinonCamera* coreCamera() const noexcept;
+    [[nodiscard]] quint64 rxOverflowDrops() const;
 
     // Lifecycle compatibility wrappers
     bool start()

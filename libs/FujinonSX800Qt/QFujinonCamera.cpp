@@ -105,6 +105,11 @@ FujinonSX800::FujinonCamera* QFujinonCamera::coreCamera() const noexcept
     return m_camera.get();
 }
 
+quint64 QFujinonCamera::rxOverflowDrops() const
+{
+    return m_camera ? static_cast<quint64>(m_camera->rxOverflowDrops()) : 0ULL;
+}
+
 void QFujinonCamera::zoomTele()
 {
     if (m_camera) {

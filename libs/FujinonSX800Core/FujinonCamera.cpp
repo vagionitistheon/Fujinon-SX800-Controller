@@ -291,8 +291,13 @@ void FujinonCamera::pollingLoop()
 void FujinonCamera::onDataReceived(const std::uint8_t* data, std::size_t size)
 {
     if (data != nullptr && size > 0U) {
-        VLOG(2) << "Writing " << size << " bytes to RX ring buffer";
-        m_rxRing.writeExact(data, size);
+        if (!m_rxRing.writeExact(data, size)) {
+            LOG(WARNING) << "RX ring buffer overflow: dropped " << size
+                         << " bytes (available capacity: " << m_rxRing.availableWrite() << ")";
+            m_rxOverflowDrops.fetch_add(size, std::memory_order_relaxed);
+            return;
+        }
+        VLOG(2) << "Wrote " << size << " bytes to RX ring buffer";
         m_rxCv.notify_one();
     }
 }
@@ -755,6 +760,11 @@ void FujinonCamera::queryTemperature()
 void FujinonCamera::queryManualIris()
 {
     enqueueCommand(m_builder.buildQueryManualIris(), "QueryManualIris");
+}
+
+std::uint64_t FujinonCamera::rxOverflowDrops() const noexcept
+{
+    return m_rxOverflowDrops.load(std::memory_order_relaxed);
 }
 
 } // namespace FujinonSX800
