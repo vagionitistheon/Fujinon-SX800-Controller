@@ -29,5 +29,6 @@ add_subdirectory(libs)
 add_subdirectory(app-qt)
 
 if(BUILD_TESTING)
+    enable_testing()
     add_subdirectory(tests)
 endif()

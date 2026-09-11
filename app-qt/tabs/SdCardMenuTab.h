@@ -6,9 +6,11 @@
 #include "CameraStatus.h"
 #include "QFujinonCamera.h"
 
+#include <QComboBox>
 #include <QGroupBox>
 #include <QLabel>
 #include <QPushButton>
+#include <QSpinBox>
 #include <QWidget>
 
 namespace FujinonSX800App {
@@ -36,6 +38,8 @@ private:
     QLabel* lblRecordIndicator { nullptr };
     QPushButton* btnFormatSd { nullptr };
 
+    QSpinBox* spinMovieFileNo { nullptr };
+    QComboBox* cmbPlaybackMode { nullptr };
     QPushButton* btnPlay { nullptr };
     QPushButton* btnPause { nullptr };
     QPushButton* btnStopMovie { nullptr };

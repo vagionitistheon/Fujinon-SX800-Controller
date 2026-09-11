@@ -9,6 +9,7 @@
 #include "PelcoDTypes.h"
 
 #include <QByteArray>
+#include <QDateTime>
 #include <QObject>
 #include <QString>
 
@@ -73,6 +74,8 @@ public slots:
     void setAutoFocusMode(FujinonSX800::AutoFocusMode mode);
     void setAutoIris(bool enable);
     void setManualIris(int pos) { setIrisPosition(pos); }
+    void setManualIrisFNo(FujinonSX800::ManualIrisFNo fNo);
+    void setShutterLimit(FujinonSX800::ShutterLimitMode limit);
     void setAgc(bool enable);
     void setBlc(bool enable);
     void setManualShutter(int speedIdx);
@@ -82,6 +85,8 @@ public slots:
 
     // Day / Night & Filters
     void setDayNightMode(FujinonSX800::DayNightMode mode);
+    void setAutoDayNightMode(FujinonSX800::DayNightMode mode);
+    void setDayNightTrigger(bool enable);
     void setDayNightThresholds(int d2n, int n2d);
     void setDayNightDelay(int sec);
     void setOpticalFilterDay(FujinonSX800::OpticalFilter filter);
@@ -121,13 +126,24 @@ public slots:
     void setAntialiasing(bool enable);
     void setVideoStandard(FujinonSX800::VideoStandard standard);
     void setHdFormat(FujinonSX800::HdFormat format);
+    void setVideoDisplayMode(FujinonSX800::VideoDisplayMode mode);
+    void setVideoOutputFormat(FujinonSX800::HdFormat format);
+    void setOsdDatePosition(FujinonSX800::OsdPosition pos);
+    void setOsdTitlePosition(FujinonSX800::OsdPosition pos);
+    void setOsdIdPosition(FujinonSX800::OsdPosition pos);
+    void setRtcTime(const QDateTime& dt);
 
-    // Menu & System
+    // Menu, SD Card & System
     void sendMenuKey(FujinonSX800::MenuKey key);
     void sendMenuDirection(FujinonSX800::MenuDirection dir);
     void sendMenuEnter();
     void sendMenuBack();
     void formatSdCard();
+    void setSdPlayback(FujinonSX800::SdPlaybackControl ctrl);
+    void setSdPlaybackSpeed(FujinonSX800::SdPlaybackMode mode);
+    void setSdMovieFile(int fileNo);
+    void setPreset(FujinonSX800::PresetAction action, int presetNum);
+    void setBaudRate(FujinonSX800::BaudRate rate);
     void setRs485Termination(bool enable);
     void setLanguage(FujinonSX800::Language lang);
     void refreshStatus();

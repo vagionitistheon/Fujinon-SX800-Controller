@@ -469,6 +469,16 @@ void FujinonCamera::setIrisPosition(std::uint16_t pos)
     enqueueCommand(m_builder.buildSetIrisPosition(pos));
 }
 
+void FujinonCamera::setManualIris(ManualIrisFNo fNo)
+{
+    enqueueCommand(m_builder.buildSetManualIris(fNo));
+}
+
+void FujinonCamera::setShutterLimit(ShutterLimitMode limit)
+{
+    enqueueCommand(m_builder.buildSetShutterLimit(limit));
+}
+
 void FujinonCamera::setOnePushAf()
 {
     enqueueCommand(m_builder.buildOnePushAf());
@@ -492,6 +502,16 @@ void FujinonCamera::setAfSensitivity(AfSensitivity sens)
 void FujinonCamera::setDayNightMode(DayNightMode mode)
 {
     enqueueCommand(m_builder.buildSetDayNight(mode));
+}
+
+void FujinonCamera::setAutoDayNight(DayNightMode mode)
+{
+    enqueueCommand(m_builder.buildSetAutoDayNight(mode));
+}
+
+void FujinonCamera::setDayNightTrigger(bool enable)
+{
+    enqueueCommand(m_builder.buildSetDayNightTrigger(enable));
 }
 
 void FujinonCamera::setVlcFilter(VlcFilterMode mode)
@@ -584,9 +604,70 @@ void FujinonCamera::factoryReset()
     enqueueCommand(m_builder.buildFactoryReset());
 }
 
+void FujinonCamera::setVideoDisplayMode(VideoDisplayMode mode)
+{
+    enqueueCommand(m_builder.buildSetVideoDisplayMode(mode));
+}
+
+void FujinonCamera::setVideoFormat(HdFormat format)
+{
+    enqueueCommand(m_builder.buildSetHdFormat(format));
+}
+
+void FujinonCamera::setOsdDatePosition(OsdPosition pos)
+{
+    enqueueCommand(m_builder.buildSetDateTimePosition(pos));
+}
+
+void FujinonCamera::setOsdTitlePosition(OsdPosition pos)
+{
+    enqueueCommand(m_builder.buildSetTitlePosition(pos));
+}
+
+void FujinonCamera::setOsdIdPosition(OsdPosition pos)
+{
+    enqueueCommand(m_builder.buildSetIdPosition(pos));
+}
+
+void FujinonCamera::setRtcTime(std::uint8_t year, std::uint8_t month, std::uint8_t day,
+                              std::uint8_t hour, std::uint8_t minute, std::uint8_t second)
+{
+    enqueueCommand(m_builder.buildSetRtcTime(year, month, day, hour, minute, second));
+}
+
+void FujinonCamera::setSdPlayback(SdPlaybackControl ctrl)
+{
+    enqueueCommand(m_builder.buildPlayMovieSd(ctrl));
+}
+
+void FujinonCamera::setSdPlaybackSpeed(SdPlaybackMode mode)
+{
+    enqueueCommand(m_builder.buildSelectMoviePlayMode(mode));
+}
+
+void FujinonCamera::setSdMovieFile(std::uint16_t fileNo)
+{
+    enqueueCommand(m_builder.buildSetFirstMovieFile(fileNo));
+}
+
 void FujinonCamera::sendMenuKey(MenuKey key)
 {
     enqueueCommand(m_builder.buildMenuKey(key));
+}
+
+void FujinonCamera::sendMenuDirection(MenuDirection dir)
+{
+    enqueueCommand(m_builder.buildMenuDirection(dir));
+}
+
+void FujinonCamera::setPreset(PresetAction action, std::uint8_t presetId)
+{
+    enqueueCommand(m_builder.buildPreset(action, presetId));
+}
+
+void FujinonCamera::setBaudRate(BaudRate rate)
+{
+    enqueueCommand(m_builder.buildSetBaudRate(rate));
 }
 
 void FujinonCamera::sendRawFrame(const std::vector<std::uint8_t>& frame)
@@ -613,6 +694,7 @@ void FujinonCamera::queryAll()
     enqueueCommand(m_builder.buildQueryFineSettings(), "QueryFineSettings");
     enqueueCommand(m_builder.buildQueryDayNightEx(), "QueryDayNightEx");
     enqueueCommand(m_builder.buildQuerySpeedEx(), "QuerySpeedEx");
+    enqueueCommand(m_builder.buildQueryTemperature(), "QueryTemperature");
 }
 
 void FujinonCamera::queryTemperature()

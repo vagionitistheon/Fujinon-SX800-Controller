@@ -51,6 +51,12 @@ private:
     // System Settings
     QCheckBox* chkTermination { nullptr };
     QComboBox* cmbLanguage { nullptr };
+    QComboBox* cmbBaudRate { nullptr };
+
+    // Photo Presets
+    QComboBox* cmbPresetNum { nullptr };
+    QComboBox* cmbPresetAction { nullptr };
+    QPushButton* btnApplyPreset { nullptr };
 
     // Actions
     QPushButton* btnRefreshAll { nullptr };

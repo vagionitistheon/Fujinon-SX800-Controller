@@ -8,8 +8,10 @@
 
 #include <QCheckBox>
 #include <QComboBox>
+#include <QDateTimeEdit>
 #include <QGroupBox>
 #include <QLineEdit>
+#include <QPushButton>
 #include <QWidget>
 
 namespace FujinonSX800App {
@@ -36,17 +38,26 @@ private:
     QCheckBox* chkDateTimeOsd { nullptr };
     QComboBox* cmbTimeFormat { nullptr };
     QComboBox* cmbDateFormat { nullptr };
+    QComboBox* cmbDatePos { nullptr };
 
     QCheckBox* chkTitleOsd { nullptr };
     QLineEdit* editTitleText { nullptr };
+    QComboBox* cmbTitlePos { nullptr };
 
     QCheckBox* chkIdOsd { nullptr };
+    QComboBox* cmbIdPos { nullptr };
+
     QCheckBox* chkCenterCrosshair { nullptr };
     QCheckBox* chkAntialiasing { nullptr };
 
-    // Video Format
+    // RTC Sync
+    QDateTimeEdit* editRtcTime { nullptr };
+    QPushButton* btnSyncRtc { nullptr };
+
+    // Video Format & Display
     QComboBox* cmbVideoStandard { nullptr };
     QComboBox* cmbHdFormat { nullptr };
+    QComboBox* cmbVideoDisplayMode { nullptr };
 
     bool isUpdatingFromTelemetry { false };
 };

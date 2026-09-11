@@ -211,8 +211,21 @@ void OpticsTab::setupUi()
     sliderIris->setValue(512);
     sliderIris->setEnabled(false);
 
+    cmbManualIrisFNo = new QComboBox(grpIris);
+    cmbManualIrisFNo->addItem(tr("Close"), static_cast<int>(FujinonSX800::ManualIrisFNo::Close));
+    cmbManualIrisFNo->addItem("F4.0", static_cast<int>(FujinonSX800::ManualIrisFNo::F4_0));
+    cmbManualIrisFNo->addItem("F4.5", static_cast<int>(FujinonSX800::ManualIrisFNo::F4_5));
+    cmbManualIrisFNo->addItem("F5.0", static_cast<int>(FujinonSX800::ManualIrisFNo::F5_0));
+    cmbManualIrisFNo->addItem("F5.6", static_cast<int>(FujinonSX800::ManualIrisFNo::F5_6));
+    cmbManualIrisFNo->addItem("F8.0", static_cast<int>(FujinonSX800::ManualIrisFNo::F8_0));
+    cmbManualIrisFNo->addItem("F11", static_cast<int>(FujinonSX800::ManualIrisFNo::F11));
+    cmbManualIrisFNo->addItem("F16", static_cast<int>(FujinonSX800::ManualIrisFNo::F16));
+    cmbManualIrisFNo->addItem("F22", static_cast<int>(FujinonSX800::ManualIrisFNo::F22));
+    cmbManualIrisFNo->setEnabled(false);
+
     irisPosLayout->addWidget(lblIris);
     irisPosLayout->addWidget(sliderIris);
+    irisPosLayout->addWidget(cmbManualIrisFNo);
     irisLayout->addLayout(irisPosLayout);
 
     auto* exposureCheckLayout = new QHBoxLayout();
@@ -223,8 +236,24 @@ void OpticsTab::setupUi()
     exposureCheckLayout->addWidget(chkBlc);
     irisLayout->addLayout(exposureCheckLayout);
 
+    auto* shutterLimitLayout = new QHBoxLayout();
+    auto* lblShutterLimit = new QLabel(tr("Auto Shutter Limit:"), grpIris);
+    cmbShutterLimit = new QComboBox(grpIris);
+    cmbShutterLimit->addItem(tr("Manual / Off"), static_cast<int>(FujinonSX800::ShutterLimitMode::Manual));
+    cmbShutterLimit->addItem("1/8 s", static_cast<int>(FujinonSX800::ShutterLimitMode::Lowest1_8));
+    cmbShutterLimit->addItem("1/15 s", static_cast<int>(FujinonSX800::ShutterLimitMode::Lowest1_15));
+    cmbShutterLimit->addItem("1/30 s", static_cast<int>(FujinonSX800::ShutterLimitMode::Lowest1_30));
+    cmbShutterLimit->addItem("1/60 s", static_cast<int>(FujinonSX800::ShutterLimitMode::Lowest1_60));
+    cmbShutterLimit->addItem("1/125 s", static_cast<int>(FujinonSX800::ShutterLimitMode::Lowest1_125));
+    cmbShutterLimit->addItem("1/250 s", static_cast<int>(FujinonSX800::ShutterLimitMode::Lowest1_250));
+    cmbShutterLimit->addItem("1/500 s", static_cast<int>(FujinonSX800::ShutterLimitMode::Lowest1_500));
+    cmbShutterLimit->addItem("1/1000 s", static_cast<int>(FujinonSX800::ShutterLimitMode::Lowest1_1000));
+    shutterLimitLayout->addWidget(lblShutterLimit);
+    shutterLimitLayout->addWidget(cmbShutterLimit);
+    irisLayout->addLayout(shutterLimitLayout);
+
     auto* shutterLayout = new QHBoxLayout();
-    auto* lblShutter = new QLabel(tr("Shutter Speed:"), grpIris);
+    auto* lblShutter = new QLabel(tr("Manual Shutter:"), grpIris);
     spinShutter = new QSpinBox(grpIris);
     spinShutter->setRange(1, 10000);
     spinShutter->setValue(100);
@@ -319,9 +348,18 @@ void OpticsTab::setupConnections()
     // Iris & Exposure
     connect(chkAutoIris, &QCheckBox::toggled, this, [this](bool checked) {
         sliderIris->setEnabled(!checked);
+        cmbManualIrisFNo->setEnabled(!checked);
         cam->setAutoIris(checked);
     });
     connect(sliderIris, &QSlider::sliderReleased, this, [this]() { cam->setManualIris(sliderIris->value()); });
+    connect(cmbManualIrisFNo, QOverload<int>::of(&QComboBox::currentIndexChanged), this, [this]() {
+        const auto fNo = static_cast<FujinonSX800::ManualIrisFNo>(cmbManualIrisFNo->currentData().toInt());
+        cam->setManualIrisFNo(fNo);
+    });
+    connect(cmbShutterLimit, QOverload<int>::of(&QComboBox::currentIndexChanged), this, [this]() {
+        const auto limit = static_cast<FujinonSX800::ShutterLimitMode>(cmbShutterLimit->currentData().toInt());
+        cam->setShutterLimit(limit);
+    });
     connect(chkAgc, &QCheckBox::toggled, cam, &FujinonSX800Qt::QFujinonCamera::setAgc);
     connect(chkBlc, &QCheckBox::toggled, cam, &FujinonSX800Qt::QFujinonCamera::setBlc);
     connect(spinShutter, QOverload<int>::of(&QSpinBox::valueChanged), cam,

@@ -56,6 +56,19 @@ void DayNightTab::setupUi()
     spinAutoDelay->setValue(5);
     modeLayout->addWidget(spinAutoDelay, 3, 1);
 
+    modeLayout->addWidget(new QLabel(tr("Auto Day/Night Control:"), grpMode), 4, 0);
+    cmbAutoDayNight = new QComboBox(grpMode);
+    cmbAutoDayNight->addItem(tr("Auto Mode"), static_cast<int>(FujinonSX800::DayNightMode::Auto));
+    cmbAutoDayNight->addItem(tr("Day Mode"), static_cast<int>(FujinonSX800::DayNightMode::Day));
+    cmbAutoDayNight->addItem(tr("Night Mode"), static_cast<int>(FujinonSX800::DayNightMode::Night));
+    modeLayout->addWidget(cmbAutoDayNight, 4, 1);
+
+    modeLayout->addWidget(new QLabel(tr("External Trigger:"), grpMode), 5, 0);
+    cmbTriggerLevel = new QComboBox(grpMode);
+    cmbTriggerLevel->addItem(tr("Disabled"), 0);
+    cmbTriggerLevel->addItem(tr("Enabled (Trigger Active)"), 1);
+    modeLayout->addWidget(cmbTriggerLevel, 5, 1);
+
     mainLayout->addWidget(grpMode);
 
     // ==================== 2. SCHEDULE & OPTICAL FILTERS ====================
@@ -102,6 +115,16 @@ void DayNightTab::setupConnections()
     connect(cmbMode, QOverload<int>::of(&QComboBox::currentIndexChanged), this, [this]() {
         const auto mode = static_cast<FujinonSX800::DayNightMode>(cmbMode->currentData().toInt());
         cam->setDayNightMode(mode);
+    });
+
+    connect(cmbAutoDayNight, QOverload<int>::of(&QComboBox::currentIndexChanged), this, [this]() {
+        const auto mode = static_cast<FujinonSX800::DayNightMode>(cmbAutoDayNight->currentData().toInt());
+        cam->setAutoDayNightMode(mode);
+    });
+
+    connect(cmbTriggerLevel, QOverload<int>::of(&QComboBox::currentIndexChanged), this, [this]() {
+        const bool enabled = cmbTriggerLevel->currentData().toInt() != 0;
+        cam->setDayNightTrigger(enabled);
     });
 
     connect(spinDayToNightTh, QOverload<int>::of(&QSpinBox::valueChanged), this,

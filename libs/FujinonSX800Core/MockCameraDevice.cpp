@@ -103,7 +103,7 @@ void MockCameraDevice::processIncomingFrame(const std::vector<std::uint8_t>& fra
     std::vector<std::uint8_t> response;
 
     // Standard Pelco-D query or command dispatch
-    if (cmd1 == 0x00U && cmd2 == 0x55U) {
+    if (cmd1 == 0x00U && (cmd2 == 0x55U || cmd2 == 0x83U)) {
         // Query Zoom Position -> 0x00, 0x5D, MSB, LSB
         std::uint16_t zoom { 1000U };
         {
@@ -113,7 +113,7 @@ void MockCameraDevice::processIncomingFrame(const std::vector<std::uint8_t>& fra
         const std::uint8_t msb = static_cast<std::uint8_t>((zoom >> 8U) & 0xFFU);
         const std::uint8_t lsb = static_cast<std::uint8_t>(zoom & 0xFFU);
         response = PelcoDFrame::createFrame(m_address, 0x00U, 0x5DU, msb, lsb);
-    } else if (cmd1 == 0x00U && cmd2 == 0x73U) {
+    } else if (cmd1 == 0x00U && (cmd2 == 0x81U || cmd2 == 0x73U)) {
         // Query Focus Position -> 0x00, 0x81, MSB, LSB
         std::uint16_t focus { 2000U };
         {
@@ -123,13 +123,13 @@ void MockCameraDevice::processIncomingFrame(const std::vector<std::uint8_t>& fra
         const std::uint8_t msb = static_cast<std::uint8_t>((focus >> 8U) & 0xFFU);
         const std::uint8_t lsb = static_cast<std::uint8_t>(focus & 0xFFU);
         response = PelcoDFrame::createFrame(m_address, 0x00U, 0x81U, msb, lsb);
-    } else if (cmd1 == 0x00U && cmd2 == 0x77U) {
+    } else if (cmd1 == 0x00U && (cmd2 == 0x97U || cmd2 == 0x77U)) {
         // Query Shutter
-        response = PelcoDFrame::createFrame(m_address, 0x00U, 0x85U, 0x00U, 0x05U);
-    } else if (cmd1 == 0x00U && cmd2 == 0x79U) {
+        response = PelcoDFrame::createFrame(m_address, 0x00U, 0x97U, 0x00U, 0x05U);
+    } else if (cmd1 == 0x00U && (cmd2 == 0x9BU || cmd2 == 0x79U)) {
         // Query ISO
-        response = PelcoDFrame::createFrame(m_address, 0x00U, 0x87U, 0x00U, 0x02U);
-    } else if (cmd1 == 0x00U && cmd2 == 0x7BU) {
+        response = PelcoDFrame::createFrame(m_address, 0x00U, 0x9BU, 0x00U, 0x02U);
+    } else if (cmd1 == 0x00U && (cmd2 == 0x89U || cmd2 == 0x7BU)) {
         // Query Serial Number -> 18-byte frame
         std::string serial;
         {
@@ -163,9 +163,33 @@ void MockCameraDevice::processIncomingFrame(const std::vector<std::uint8_t>& fra
         const auto intPart = static_cast<std::uint8_t>(static_cast<int>(temp));
         const auto fractPart = static_cast<std::uint8_t>(static_cast<int>(temp * 10.0) % 10);
         response = PelcoDFrame::createFrame(m_address, 0xF0U, 0xC1U, intPart, fractPart);
-    } else if (cmd1 == 0x00U && cmd2 == 0x7FU) {
+    } else if (cmd1 == 0x00U && (cmd2 == 0x8DU || cmd2 == 0x7FU)) {
         // Query Lens Status -> 0x00, 0x8D, d1, d2
         response = PelcoDFrame::createFrame(m_address, 0x00U, 0x8DU, 0x00U, 0x00U);
+    } else if (cmd1 == 0x00U && cmd2 == 0xADU) {
+        // Query Manual Settings -> 0x00, 0xAF, d1, d2
+        response = PelcoDFrame::createFrame(m_address, 0x00U, 0xAFU, d1, 0x00U);
+    } else if (cmd1 == 0xF0U && cmd2 == 0x1DU) {
+        // Query Photo Settings -> 0xF0, 0x1F, d1, d2
+        response = PelcoDFrame::createFrame(m_address, 0xF0U, 0x1FU, d1, 0x00U);
+    } else if (cmd1 == 0xF0U && cmd2 == 0x3DU) {
+        // Query Image Quality -> 0xF0, 0x3F, d1, d2
+        response = PelcoDFrame::createFrame(m_address, 0xF0U, 0x3FU, d1, 0x00U);
+    } else if (cmd1 == 0xF0U && cmd2 == 0x5DU) {
+        // Query Display Settings -> 0xF0, 0x5F, d1, d2
+        response = PelcoDFrame::createFrame(m_address, 0xF0U, 0x5FU, d1, 0x00U);
+    } else if (cmd1 == 0xF0U && cmd2 == 0x8DU) {
+        // Query Operation Settings -> 0xF0, 0x8F, d1, d2
+        response = PelcoDFrame::createFrame(m_address, 0xF0U, 0x8FU, d1, 0x00U);
+    } else if (cmd1 == 0xF0U && cmd2 == 0xFDU) {
+        // Query Fine Settings -> 0xF0, 0xFF, d1, d2
+        response = PelcoDFrame::createFrame(m_address, 0xF0U, 0xFFU, d1, 0x00U);
+    } else if (cmd1 == 0xF1U && cmd2 == 0x1DU) {
+        // Query Day/Night Ex -> 0xF1, 0x1F, d1, d2
+        response = PelcoDFrame::createFrame(m_address, 0xF1U, 0x1FU, d1, 0x00U);
+    } else if (cmd1 == 0xF1U && cmd2 == 0x2DU) {
+        // Query Speed Ex -> 0xF1, 0x2F, d1, d2
+        response = PelcoDFrame::createFrame(m_address, 0xF1U, 0x2FU, d1, 0x00U);
     } else if (cmd1 == 0x00U && cmd2 == 0x4FU) {
         // Set Zoom Position
         {

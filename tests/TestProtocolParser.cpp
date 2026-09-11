@@ -114,12 +114,58 @@ void testExtendedQueryResponses()
     assert(status.fineBrightness == -5);
 }
 
+void testAllExtendedSpecResponses()
+{
+    FujinonSX800::CameraStatus status;
+
+    // 0x00, 0x97: Manual Shutter Speed Response: d1=0x20 (1/1000s)
+    const auto shutResp = FujinonSX800::PelcoDFrame::createFrame(0x07U, 0x00U, 0x97U, 0x20U, 0x00U);
+    assert(FujinonSX800::ProtocolParser::parsePacket(shutResp, status));
+    assert(status.shutterSpeed == FujinonSX800::ShutterSpeed::Speed1_1000);
+
+    // 0x00, 0x9B: Manual ISO Response: d1=0x04 (ISO 800)
+    const auto isoResp = FujinonSX800::PelcoDFrame::createFrame(0x07U, 0x00U, 0x9BU, 0x04U, 0x00U);
+    assert(FujinonSX800::ProtocolParser::parsePacket(isoResp, status));
+    assert(status.isoSensitivity == FujinonSX800::IsoSensitivity::Iso800);
+
+    // 0x00, 0x9D: Manual Iris Response: d1=0x07 (F8.0)
+    const auto irisResp = FujinonSX800::PelcoDFrame::createFrame(0x07U, 0x00U, 0x9DU, 0x07U, 0x00U);
+    assert(FujinonSX800::ProtocolParser::parsePacket(irisResp, status));
+    assert(status.manualIrisFNo == FujinonSX800::ManualIrisFNo::F8_0);
+
+    // 0xF0, 0x5F: Display Settings: d1=0x43, d2=0x01 (Date/Time ON)
+    const auto dispResp = FujinonSX800::PelcoDFrame::createFrame(0x07U, 0xF0U, 0x5FU, 0x43U, 0x01U);
+    assert(FujinonSX800::ProtocolParser::parsePacket(dispResp, status));
+    assert(status.dateTimeDisplay == true);
+
+    // 0xF0, 0x8F: Operation Settings: d1=0x67, d2=0x02 (PAL)
+    const auto opResp = FujinonSX800::PelcoDFrame::createFrame(0x07U, 0xF0U, 0x8FU, 0x67U, 0x02U);
+    assert(FujinonSX800::ProtocolParser::parsePacket(opResp, status));
+    assert(status.videoStandard == FujinonSX800::VideoStandard::PAL);
+
+    // 0xF0, 0xB3: SD Movie Count: d1=0x01, d2=0x20 (288 files)
+    const auto sdCountResp = FujinonSX800::PelcoDFrame::createFrame(0x07U, 0xF0U, 0xB3U, 0x01U, 0x20U);
+    assert(FujinonSX800::ProtocolParser::parsePacket(sdCountResp, status));
+    assert(status.sdMovieCount == 288U);
+
+    // 0xF1, 0x1F: Day/Night Ex: d1=0x01, d2=0x02 (Night)
+    const auto dnExResp = FujinonSX800::PelcoDFrame::createFrame(0x07U, 0xF1U, 0x1FU, 0x01U, 0x02U);
+    assert(FujinonSX800::ProtocolParser::parsePacket(dnExResp, status));
+    assert(status.dayNightMode == FujinonSX800::DayNightMode::Night);
+
+    // 0xF1, 0x2F: Speed Ex: d1=0x25, d2=0x09 (Zoom speed 9)
+    const auto spdExResp = FujinonSX800::PelcoDFrame::createFrame(0x07U, 0xF1U, 0x2FU, 0x25U, 0x09U);
+    assert(FujinonSX800::ProtocolParser::parsePacket(spdExResp, status));
+    assert(status.zoomSpeedEx == 9U);
+}
+
 int main()
 {
     testGeneralAck();
     testExtendedResponses();
     test18ByteSerialResponse();
     testExtendedQueryResponses();
+    testAllExtendedSpecResponses();
     testFwVersionVariants();
 
     std::cout << "[PASS] TestProtocolParser completed successfully." << std::endl;

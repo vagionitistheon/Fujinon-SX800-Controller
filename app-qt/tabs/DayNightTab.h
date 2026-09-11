@@ -34,6 +34,8 @@ private:
     FujinonSX800Qt::QFujinonCamera* cam { nullptr };
 
     QComboBox* cmbMode { nullptr };
+    QComboBox* cmbAutoDayNight { nullptr };
+    QComboBox* cmbTriggerLevel { nullptr };
     QSpinBox* spinDayToNightTh { nullptr };
     QSpinBox* spinNightToDayTh { nullptr };
     QSpinBox* spinAutoDelay { nullptr };

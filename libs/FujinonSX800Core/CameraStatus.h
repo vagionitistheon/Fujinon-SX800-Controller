@@ -42,19 +42,24 @@ struct CameraStatus {
 
     DigitalZoomMode digitalZoomMode { DigitalZoomMode::Off };
     DigitalZoomStep digitalZoomStep { DigitalZoomStep::X1_00 };
+    std::uint8_t digitalZoomMag { 1U };
 
     // ---------- Exposure & Iris ----------
     AutoIrisMode autoIrisMode { AutoIrisMode::On };
     std::uint16_t manualIrisPosition { 0U };
     std::uint16_t irisPosition { 0U };
+    ManualIrisFNo manualIrisFNo { ManualIrisFNo::F4_0 };
     bool irisMoving { false };
     bool irisCloseLimit { false };
     bool irisOpenLimit { false };
 
     AgcMode agcMode { AgcMode::Auto };
     BlcMode blcMode { BlcMode::Off };
+    ShutterLimitMode shutterLimitMode { ShutterLimitMode::Manual };
     std::uint8_t shutterLimitAuto { 0U };
+    ShutterSpeed shutterSpeed { ShutterSpeed::Auto };
     std::uint16_t manualShutterSpeed { 0U };
+    IsoSensitivity isoSensitivity { IsoSensitivity::Auto };
     std::uint16_t manualIso { 0U };
 
     // ---------- Image Quality ----------
@@ -129,6 +134,7 @@ struct CameraStatus {
     // ---------- Video & System ----------
     VideoStandard videoStandard { VideoStandard::NTSC };
     HdFormat hdFormat { HdFormat::HD1080p_60 };
+    VideoDisplayMode videoDisplayMode { VideoDisplayMode::Fit };
     std::uint8_t rs485Address { 7U };
     std::uint8_t address { 7U };
     BaudRate baudRate { BaudRate::Baud9600 };
@@ -136,10 +142,17 @@ struct CameraStatus {
     bool terminationEnabled { false };
     Language language { Language::English };
 
+    // ---------- SD Card & Recording ----------
+    SdRecordMode sdRecordMode { SdRecordMode::FullStop };
+    std::uint16_t sdMovieCount { 0U };
+    std::uint16_t sdRemainingMinutes { 0U };
+    SdPlaybackMode sdPlaybackMode { SdPlaybackMode::LiveView };
+
     std::string serialNumber {};
     std::uint8_t fwVersionMajor { 0U };
     std::uint8_t fwVersionMinor { 0U };
-    double internalTemperatureC { 25.0 };
+    double internalTemperatureC { 0.0 };
+    bool temperatureValid { false };
 
     // ---------- State Tracking ----------
     bool isConnected { false };

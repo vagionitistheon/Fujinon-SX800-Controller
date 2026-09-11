@@ -63,6 +63,8 @@ private:
     // Iris & Exposure Controls
     QCheckBox* chkAutoIris { nullptr };
     QSlider* sliderIris { nullptr };
+    QComboBox* cmbManualIrisFNo { nullptr };
+    QComboBox* cmbShutterLimit { nullptr };
     QCheckBox* chkAgc { nullptr };
     QCheckBox* chkBlc { nullptr };
     QSpinBox* spinShutter { nullptr };

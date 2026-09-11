@@ -564,7 +564,7 @@ void QFujinonCamera::sendMenuKey(FujinonSX800::MenuKey key)
 void QFujinonCamera::sendMenuDirection(FujinonSX800::MenuDirection dir)
 {
     if (m_camera) {
-        m_camera->sendMenuKey(dir);
+        m_camera->sendMenuDirection(dir);
     }
 }
 
@@ -582,10 +582,124 @@ void QFujinonCamera::sendMenuBack()
     }
 }
 
+void QFujinonCamera::setManualIrisFNo(FujinonSX800::ManualIrisFNo fNo)
+{
+    if (m_camera) {
+        m_camera->setManualIris(fNo);
+    }
+}
+
+void QFujinonCamera::setShutterLimit(FujinonSX800::ShutterLimitMode limit)
+{
+    if (m_camera) {
+        m_camera->setShutterLimit(limit);
+    }
+}
+
+void QFujinonCamera::setAutoDayNightMode(FujinonSX800::DayNightMode mode)
+{
+    if (m_camera) {
+        m_camera->setAutoDayNight(mode);
+    }
+}
+
+void QFujinonCamera::setDayNightTrigger(bool enable)
+{
+    if (m_camera) {
+        m_camera->setDayNightTrigger(enable);
+    }
+}
+
+void QFujinonCamera::setVideoDisplayMode(FujinonSX800::VideoDisplayMode mode)
+{
+    if (m_camera) {
+        m_camera->setVideoDisplayMode(mode);
+    }
+}
+
+void QFujinonCamera::setVideoOutputFormat(FujinonSX800::HdFormat format)
+{
+    if (m_camera) {
+        m_camera->setVideoFormat(format);
+    }
+}
+
+void QFujinonCamera::setOsdDatePosition(FujinonSX800::OsdPosition pos)
+{
+    if (m_camera) {
+        m_camera->setOsdDatePosition(pos);
+    }
+}
+
+void QFujinonCamera::setOsdTitlePosition(FujinonSX800::OsdPosition pos)
+{
+    if (m_camera) {
+        m_camera->setOsdTitlePosition(pos);
+    }
+}
+
+void QFujinonCamera::setOsdIdPosition(FujinonSX800::OsdPosition pos)
+{
+    if (m_camera) {
+        m_camera->setOsdIdPosition(pos);
+    }
+}
+
+void QFujinonCamera::setRtcTime(const QDateTime& dt)
+{
+    if (m_camera && dt.isValid()) {
+        const auto date = dt.date();
+        const auto time = dt.time();
+        const auto year = static_cast<std::uint8_t>(date.year() % 100);
+        const auto month = static_cast<std::uint8_t>(date.month());
+        const auto day = static_cast<std::uint8_t>(date.day());
+        const auto hour = static_cast<std::uint8_t>(time.hour());
+        const auto minute = static_cast<std::uint8_t>(time.minute());
+        const auto second = static_cast<std::uint8_t>(time.second());
+        m_camera->setRtcTime(year, month, day, hour, minute, second);
+    }
+}
+
+void QFujinonCamera::setSdPlayback(FujinonSX800::SdPlaybackControl ctrl)
+{
+    if (m_camera) {
+        m_camera->setSdPlayback(ctrl);
+    }
+}
+
+void QFujinonCamera::setSdPlaybackSpeed(FujinonSX800::SdPlaybackMode mode)
+{
+    if (m_camera) {
+        m_camera->setSdPlaybackSpeed(mode);
+    }
+}
+
+void QFujinonCamera::setSdMovieFile(int fileNo)
+{
+    if (m_camera) {
+        m_camera->setSdMovieFile(static_cast<std::uint16_t>(fileNo));
+    }
+}
+
+void QFujinonCamera::setPreset(FujinonSX800::PresetAction action, int presetNum)
+{
+    if (m_camera) {
+        m_camera->setPreset(action, static_cast<std::uint8_t>(presetNum));
+    }
+}
+
+void QFujinonCamera::setBaudRate(FujinonSX800::BaudRate rate)
+{
+    if (m_camera) {
+        m_camera->setBaudRate(rate);
+    }
+}
+
 void QFujinonCamera::formatSdCard()
 {
     if (m_camera) {
-        m_camera->sendRawFrame(FujinonSX800::PelcoDFrame::createFrame(m_address, 0xF0U, 0x6DU, 0x00U, 0x01U));
+        FujinonSX800::ProtocolBuilder pb(m_address);
+        m_camera->sendRawFrame(pb.buildFormatSdCard());
     }
 }
 

@@ -71,6 +71,8 @@ public:
     void setZoomPosition(std::uint16_t pulse);
     void setFocusPosition(std::uint16_t pulse);
     void setIrisPosition(std::uint16_t pos);
+    void setManualIris(ManualIrisFNo fNo);
+    void setShutterLimit(ShutterLimitMode limit);
 
     // Auto focus & Day/Night
     void setOnePushAf();
@@ -78,6 +80,8 @@ public:
     void setAfArea(AfArea area);
     void setAfSensitivity(AfSensitivity sens);
     void setDayNightMode(DayNightMode mode);
+    void setAutoDayNight(DayNightMode mode);
+    void setDayNightTrigger(bool enable);
     void setOpticalFilterDay(OpticalFilter filter);
     void setOpticalFilterNight(OpticalFilter filter);
     void setIrWavelength(IrWavelength wl);
@@ -96,8 +100,23 @@ public:
     void setDigitalZoom(DigitalZoomMode mode, std::uint8_t mag);
     void setNoiseReduction(NoiseReductionLevel level);
 
+    // Video, OSD & Media
+    void setVideoDisplayMode(VideoDisplayMode mode);
+    void setVideoFormat(HdFormat format);
+    void setOsdDatePosition(OsdPosition pos);
+    void setOsdTitlePosition(OsdPosition pos);
+    void setOsdIdPosition(OsdPosition pos);
+    void setRtcTime(std::uint8_t year, std::uint8_t month, std::uint8_t day,
+                    std::uint8_t hour, std::uint8_t minute, std::uint8_t second);
+    void setSdPlayback(SdPlaybackControl ctrl);
+    void setSdPlaybackSpeed(SdPlaybackMode mode);
+    void setSdMovieFile(std::uint16_t fileNo);
+
     // Navigation, System & Maintenance
     void sendMenuKey(MenuKey key);
+    void sendMenuDirection(MenuDirection dir);
+    void setPreset(PresetAction action, std::uint8_t presetId);
+    void setBaudRate(BaudRate rate);
     void sendRawFrame(const std::vector<std::uint8_t>& frame);
     void sendQueryFrame(const std::vector<std::uint8_t>& frame, std::string queryTag = "CustomQuery");
     void queryAll();
