@@ -10,6 +10,12 @@
 #include <sys/ioctl.h>
 #include <unistd.h>
 #else
+#ifndef WIN32_LEAN_AND_MEAN
+#define WIN32_LEAN_AND_MEAN
+#endif
+#ifndef NOMINMAX
+#define NOMINMAX
+#endif
 #include <windows.h>
 #endif
 
@@ -266,6 +272,147 @@ std::optional<KeyEvent> Terminal::pollKey()
     event.ch = c;
     return event;
 #else
+    const HANDLE hIn = ::GetStdHandle(STD_INPUT_HANDLE);
+    if (hIn == INVALID_HANDLE_VALUE || hIn == nullptr) {
+        return std::nullopt;
+    }
+
+    DWORD numEvents = 0;
+    while (::GetNumberOfConsoleInputEvents(hIn, &numEvents) != 0 && numEvents > 0) {
+        INPUT_RECORD record {};
+        DWORD eventsRead = 0;
+        if (::ReadConsoleInputW(hIn, &record, 1, &eventsRead) == 0 || eventsRead == 0) {
+            return std::nullopt;
+        }
+
+        if (record.EventType == WINDOW_BUFFER_SIZE_EVENT) {
+            g_resizedFlag.store(true, std::memory_order_relaxed);
+            continue;
+        }
+
+        if (record.EventType != KEY_EVENT) {
+            continue;
+        }
+
+        const auto& ke = record.Event.KeyEvent;
+        if (!ke.bKeyDown) {
+            continue;
+        }
+
+        const WORD vk = ke.wVirtualKeyCode;
+
+        // Ignore standalone modifier keystrokes
+        if (vk == VK_SHIFT || vk == VK_LSHIFT || vk == VK_RSHIFT || vk == VK_CONTROL || vk == VK_LCONTROL
+            || vk == VK_RCONTROL || vk == VK_MENU || vk == VK_LMENU || vk == VK_RMENU || vk == VK_CAPITAL
+            || vk == VK_NUMLOCK || vk == VK_SCROLL) {
+            continue;
+        }
+
+        const DWORD ctrlState = ke.dwControlKeyState;
+        const bool alt = (ctrlState & (LEFT_ALT_PRESSED | RIGHT_ALT_PRESSED)) != 0;
+        const bool ctrl = (ctrlState & (LEFT_CTRL_PRESSED | RIGHT_CTRL_PRESSED)) != 0;
+        const bool shift = (ctrlState & SHIFT_PRESSED) != 0;
+
+        KeyEvent event {};
+        event.alt = alt;
+        event.ctrl = ctrl;
+
+        // Navigation and control keys
+        switch (vk) {
+        case VK_UP:
+            event.key = Key::Up;
+            return event;
+        case VK_DOWN:
+            event.key = Key::Down;
+            return event;
+        case VK_LEFT:
+            event.key = Key::Left;
+            return event;
+        case VK_RIGHT:
+            event.key = Key::Right;
+            return event;
+        case VK_HOME:
+            event.key = Key::Home;
+            return event;
+        case VK_END:
+            event.key = Key::End;
+            return event;
+        case VK_PRIOR:
+            event.key = Key::PageUp;
+            return event;
+        case VK_NEXT:
+            event.key = Key::PageDown;
+            return event;
+        case VK_RETURN:
+            event.key = Key::Enter;
+            return event;
+        case VK_ESCAPE:
+            event.key = Key::Escape;
+            return event;
+        case VK_BACK:
+            event.key = Key::Backspace;
+            return event;
+        case VK_TAB:
+            event.key = shift ? Key::BackTab : Key::Tab;
+            return event;
+        case VK_SPACE:
+            event.key = Key::Space;
+            event.ch = ' ';
+            return event;
+        default:
+            break;
+        }
+
+        // Function keys F1 - F12
+        if (vk >= VK_F1 && vk <= VK_F12) {
+            event.key = static_cast<Key>(static_cast<std::uint16_t>(Key::F1) + (vk - VK_F1));
+            return event;
+        }
+
+        // Ctrl + letter (e.g. Ctrl+C, Ctrl+Q)
+        if (ctrl) {
+            if (ke.uChar.AsciiChar >= 1 && ke.uChar.AsciiChar <= 26) {
+                event.key = Key::Char;
+                event.ctrl = true;
+                event.ch = static_cast<char>('a' + (ke.uChar.AsciiChar - 1));
+                return event;
+            }
+            if (vk >= 'A' && vk <= 'Z') {
+                event.key = Key::Char;
+                event.ctrl = true;
+                event.ch = static_cast<char>('a' + (vk - 'A'));
+                return event;
+            }
+        }
+
+        // Standard Unicode/ASCII character input
+        const wchar_t wch = ke.uChar.UnicodeChar;
+        if (wch >= 32 && wch <= 126) {
+            event.key = Key::Char;
+            event.ch = static_cast<char>(wch);
+            return event;
+        }
+
+        const char ach = ke.uChar.AsciiChar;
+        if (ach >= 32 && ach <= 126) {
+            event.key = Key::Char;
+            event.ch = ach;
+            return event;
+        }
+
+        // Fallback for alphanumeric keys with Alt or when char is not populated
+        if (vk >= '0' && vk <= '9') {
+            event.key = Key::Char;
+            event.ch = static_cast<char>('0' + (vk - '0'));
+            return event;
+        }
+        if (vk >= 'A' && vk <= 'Z') {
+            event.key = Key::Char;
+            event.ch = static_cast<char>((shift ? 'A' : 'a') + (vk - 'A'));
+            return event;
+        }
+    }
+
     return std::nullopt;
 #endif
 }
