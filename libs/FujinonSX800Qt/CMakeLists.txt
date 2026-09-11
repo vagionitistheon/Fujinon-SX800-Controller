@@ -16,3 +16,6 @@ target_link_libraries(FujinonSX800Qt PUBLIC
     FujinonSX800Core
     Qt6::Core
 )
+
+apply_compiler_flags(FujinonSX800Qt)
+

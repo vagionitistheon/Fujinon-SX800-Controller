@@ -102,7 +102,7 @@ struct CameraStatus {
     std::uint8_t dayToNightThreshold { 30U };
     std::uint8_t nightToDayThreshold { 50U };
     std::uint8_t dayNightAutoDelaySec { 5U };
-    std::uint16_t dayStartTimeMinutes { 360U };   // 06:00
+    std::uint16_t dayStartTimeMinutes { 360U }; // 06:00
     std::uint16_t nightStartTimeMinutes { 1080U }; // 18:00
     OpticalFilter opticalFilterDay { OpticalFilter::Visible };
     OpticalFilter filterDay { OpticalFilter::Visible };

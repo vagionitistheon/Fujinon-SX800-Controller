@@ -6,9 +6,7 @@
 namespace FujinonSX800Qt {
 
 QFujinonCamera::QFujinonCamera(
-    std::shared_ptr<FujinonSX800::ITransport> transport,
-    std::uint8_t address,
-    QObject* parent)
+    std::shared_ptr<FujinonSX800::ITransport> transport, std::uint8_t address, QObject* parent)
     : QObject(parent)
     , m_transport { std::move(transport) }
     , m_address { address }
@@ -20,8 +18,7 @@ QFujinonCamera::~QFujinonCamera()
     disconnectCamera();
 }
 
-void QFujinonCamera::setTransport(
-    std::shared_ptr<FujinonSX800::ITransport> transport, std::uint8_t address)
+void QFujinonCamera::setTransport(std::shared_ptr<FujinonSX800::ITransport> transport, std::uint8_t address)
 {
     disconnectCamera();
     m_transport = std::move(transport);
@@ -37,29 +34,22 @@ bool QFujinonCamera::connectCamera()
     m_camera = std::make_unique<FujinonSX800::FujinonCamera>(m_transport, m_address);
 
     m_camera->addStatusCallback([this](const FujinonSX800::CameraStatus& status) {
-        QMetaObject::invokeMethod(this, [this, status] {
-            emit statusUpdated(status);
+        QMetaObject::invokeMethod(this, [this, status] { emit statusUpdated(status); });
+    });
+
+    m_camera->addTrafficCallback([this](bool isTx, const std::vector<std::uint8_t>& frame) {
+        const QByteArray bytes(reinterpret_cast<const char*>(frame.data()), static_cast<int>(frame.size()));
+        const QString desc = describePacket(isTx, frame);
+
+        QMetaObject::invokeMethod(this, [this, isTx, bytes, desc] {
+            emit trafficLogged(isTx, bytes, desc);
+            emit frameLogged(bytes, isTx);
         });
     });
 
-    m_camera->addTrafficCallback(
-        [this](bool isTx, const std::vector<std::uint8_t>& frame) {
-            const QByteArray bytes(
-                reinterpret_cast<const char*>(frame.data()),
-                static_cast<int>(frame.size()));
-            const QString desc = describePacket(isTx, frame);
-
-            QMetaObject::invokeMethod(this, [this, isTx, bytes, desc] {
-                emit trafficLogged(isTx, bytes, desc);
-                emit frameLogged(bytes, isTx);
-            });
-        });
-
     m_camera->addTimeoutCallback([this](const std::string& queryTag) {
         const QString tag = QString::fromStdString(queryTag);
-        QMetaObject::invokeMethod(this, [this, tag] {
-            emit queryTimeoutOccurred(tag);
-        });
+        QMetaObject::invokeMethod(this, [this, tag] { emit queryTimeoutOccurred(tag); });
     });
 
     const bool ok = m_camera->start();
@@ -299,8 +289,8 @@ void QFujinonCamera::setDayNightThresholds(int d2n, int n2d)
 {
     if (m_camera) {
         FujinonSX800::ProtocolBuilder pb(m_address);
-        m_camera->sendRawFrame(pb.buildSetDayNightThreshold(
-            static_cast<std::uint8_t>(d2n), static_cast<std::uint8_t>(n2d)));
+        m_camera->sendRawFrame(
+            pb.buildSetDayNightThreshold(static_cast<std::uint8_t>(d2n), static_cast<std::uint8_t>(n2d)));
     }
 }
 
@@ -308,8 +298,8 @@ void QFujinonCamera::setDayNightDelay(int sec)
 {
     if (m_camera) {
         // Original Command 9 delay parameter
-        m_camera->sendRawFrame(FujinonSX800::PelcoDFrame::createFrame(
-            m_address, 0xF1U, 0x05U, 0x00U, static_cast<std::uint8_t>(sec)));
+        m_camera->sendRawFrame(
+            FujinonSX800::PelcoDFrame::createFrame(m_address, 0xF1U, 0x05U, 0x00U, static_cast<std::uint8_t>(sec)));
     }
 }
 
@@ -486,8 +476,8 @@ void QFujinonCamera::setDigitalZoomStep(FujinonSX800::DigitalZoomStep step)
 {
     if (m_camera) {
         // Step command in Pelco-D Original Command 2
-        m_camera->sendRawFrame(FujinonSX800::PelcoDFrame::createFrame(
-            m_address, 0xF0U, 0x37U, 0x00U, static_cast<std::uint8_t>(step)));
+        m_camera->sendRawFrame(
+            FujinonSX800::PelcoDFrame::createFrame(m_address, 0xF0U, 0x37U, 0x00U, static_cast<std::uint8_t>(step)));
     }
 }
 
@@ -713,8 +703,8 @@ void QFujinonCamera::setRs485Termination(bool enable)
 void QFujinonCamera::setLanguage(FujinonSX800::Language lang)
 {
     if (m_camera) {
-        m_camera->sendRawFrame(FujinonSX800::PelcoDFrame::createFrame(
-            m_address, 0xF0U, 0x75U, 0x00U, static_cast<std::uint8_t>(lang)));
+        m_camera->sendRawFrame(
+            FujinonSX800::PelcoDFrame::createFrame(m_address, 0xF0U, 0x75U, 0x00U, static_cast<std::uint8_t>(lang)));
     }
 }
 

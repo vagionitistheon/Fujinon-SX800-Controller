@@ -25,9 +25,7 @@ bool FujinonCamera::start()
         return false;
     }
 
-    m_transport->setDataCallback([this](const std::vector<std::uint8_t>& data) {
-        onDataReceived(data);
-    });
+    m_transport->setDataCallback([this](const std::vector<std::uint8_t>& data) { onDataReceived(data); });
 
     if (!m_transport->isOpen()) {
         if (!m_transport->open()) {
@@ -172,8 +170,8 @@ void FujinonCamera::checkQueryTimeout()
             tag = m_pendingQueryTag;
         }
 
-        LOG(WARNING) << "Query timeout: No response received for query '" << tag
-                     << "' within " << m_queryTimeoutMs << " ms";
+        LOG(WARNING) << "Query timeout: No response received for query '" << tag << "' within " << m_queryTimeoutMs
+                     << " ms";
 
         std::vector<TimeoutCallback> cbs;
         {
@@ -211,9 +209,8 @@ void FujinonCamera::workerLoop()
         CommandItem item;
         {
             std::unique_lock<std::mutex> lock(m_queueMutex);
-            m_queueCv.wait_for(lock, std::chrono::milliseconds(50), [this] {
-                return !m_commandQueue.empty() || !m_running;
-            });
+            m_queueCv.wait_for(
+                lock, std::chrono::milliseconds(50), [this] { return !m_commandQueue.empty() || !m_running; });
 
             if (!m_running) {
                 break;
@@ -255,9 +252,8 @@ void FujinonCamera::workerLoop()
             if (!item.queryTag.empty()) {
                 {
                     std::unique_lock<std::mutex> lock(m_statusMutex);
-                    m_responseCv.wait_for(lock, std::chrono::milliseconds(m_queryTimeoutMs), [this] {
-                        return !m_awaitingResponse.load() || !m_running;
-                    });
+                    m_responseCv.wait_for(lock, std::chrono::milliseconds(m_queryTimeoutMs),
+                        [this] { return !m_awaitingResponse.load() || !m_running; });
                 }
                 checkQueryTimeout();
             }
@@ -273,9 +269,7 @@ void FujinonCamera::pollingLoop()
     while (m_running) {
         {
             std::unique_lock<std::mutex> lock(m_pollMutex);
-            m_pollCv.wait_for(lock, std::chrono::milliseconds(m_pollIntervalMs), [this] {
-                return !m_running;
-            });
+            m_pollCv.wait_for(lock, std::chrono::milliseconds(m_pollIntervalMs), [this] { return !m_running; });
         }
 
         if (!m_running) {
@@ -307,9 +301,8 @@ void FujinonCamera::rxLoop()
     while (m_running) {
         {
             std::unique_lock<std::mutex> lock(m_rxMutex);
-            m_rxCv.wait_for(lock, std::chrono::milliseconds(50), [this] {
-                return m_rxRing.availableRead() >= PelcoDFrame::GeneralResponseSize || !m_running;
-            });
+            m_rxCv.wait_for(lock, std::chrono::milliseconds(50),
+                [this] { return m_rxRing.availableRead() >= PelcoDFrame::GeneralResponseSize || !m_running; });
         }
 
         if (!m_running) {
@@ -332,11 +325,8 @@ void FujinonCamera::rxLoop()
                 break;
             }
 
-            constexpr std::size_t candidateSizes[] = {
-                PelcoDFrame::QueryResponseSize,
-                PelcoDFrame::StandardFrameSize,
-                PelcoDFrame::GeneralResponseSize
-            };
+            constexpr std::size_t candidateSizes[]
+                = { PelcoDFrame::QueryResponseSize, PelcoDFrame::StandardFrameSize, PelcoDFrame::GeneralResponseSize };
 
             bool frameExtracted = false;
             std::array<std::uint8_t, PelcoDFrame::QueryResponseSize> peekBuf {};
@@ -345,8 +335,8 @@ void FujinonCamera::rxLoop()
                 if (available >= candidateSize) {
                     if (m_rxRing.peekBytes(peekBuf.data(), candidateSize)) {
                         const std::uint8_t expectedCksm = peekBuf[candidateSize - 1U];
-                        const std::uint8_t computedCksm =
-                            PelcoDFrame::calculateChecksum(&peekBuf[1], candidateSize - 2U);
+                        const std::uint8_t computedCksm
+                            = PelcoDFrame::calculateChecksum(&peekBuf[1], candidateSize - 2U);
 
                         if (expectedCksm == computedCksm) {
                             std::vector<std::uint8_t> frame(peekBuf.begin(), peekBuf.begin() + candidateSize);
@@ -629,8 +619,8 @@ void FujinonCamera::setOsdIdPosition(OsdPosition pos)
     enqueueCommand(m_builder.buildSetIdPosition(pos));
 }
 
-void FujinonCamera::setRtcTime(std::uint8_t year, std::uint8_t month, std::uint8_t day,
-                              std::uint8_t hour, std::uint8_t minute, std::uint8_t second)
+void FujinonCamera::setRtcTime(std::uint8_t year, std::uint8_t month, std::uint8_t day, std::uint8_t hour,
+    std::uint8_t minute, std::uint8_t second)
 {
     enqueueCommand(m_builder.buildSetRtcTime(year, month, day, hour, minute, second));
 }

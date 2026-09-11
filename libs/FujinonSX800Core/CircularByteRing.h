@@ -24,16 +24,16 @@ namespace FujinonSX800 {
  * @brief Represents a contiguous memory byte region.
  */
 struct ByteRegion {
-    std::uint8_t* data {nullptr};
-    std::size_t size {0};
+    std::uint8_t* data { nullptr };
+    std::size_t size { 0 };
 };
 
 /**
  * @brief Represents a contiguous const memory byte region.
  */
 struct ConstByteRegion {
-    const std::uint8_t* data {nullptr};
-    std::size_t size {0};
+    const std::uint8_t* data { nullptr };
+    std::size_t size { 0 };
 };
 
 /**
@@ -66,10 +66,8 @@ struct ZeroCopyReadView {
  * @brief Single-Producer Single-Consumer (SPSC) Lock-Free Circular Byte Ring.
  * @tparam Capacity Total capacity in bytes (must be a power of 2 and >= 2).
  */
-template <std::size_t Capacity = 65536>
-class CircularByteRing {
-    static_assert(Capacity >= 2 && (Capacity & (Capacity - 1)) == 0,
-                  "Capacity must be a power of 2");
+template <std::size_t Capacity = 65536> class CircularByteRing {
+    static_assert(Capacity >= 2 && (Capacity & (Capacity - 1)) == 0, "Capacity must be a power of 2");
 
 public:
     static constexpr std::size_t Mask = Capacity - 1;
@@ -108,9 +106,9 @@ public:
         const std::size_t firstSize = (freeBytes < spaceToEnd) ? freeBytes : spaceToEnd;
         const std::size_t secondSize = freeBytes - firstSize;
 
-        view.first = ByteRegion {&m_buffer[tailIdx], firstSize};
+        view.first = ByteRegion { &m_buffer[tailIdx], firstSize };
         if (secondSize > 0) {
-            view.second = ByteRegion {&m_buffer[0], secondSize};
+            view.second = ByteRegion { &m_buffer[0], secondSize };
         }
         return view;
     }
@@ -143,9 +141,9 @@ public:
         const std::size_t firstSize = (available < spaceToEnd) ? available : spaceToEnd;
         const std::size_t secondSize = available - firstSize;
 
-        view.first = ConstByteRegion {&m_buffer[headIdx], firstSize};
+        view.first = ConstByteRegion { &m_buffer[headIdx], firstSize };
         if (secondSize > 0) {
-            view.second = ConstByteRegion {&m_buffer[0], secondSize};
+            view.second = ConstByteRegion { &m_buffer[0], secondSize };
         }
         return view;
     }

@@ -140,8 +140,8 @@ void ConnectionWidget::refreshSerialPorts()
 #ifdef _WIN32
     for (int i = 1; i <= 32; ++i) {
         const std::string portName = "\\\\.\\COM" + std::to_string(i);
-        HANDLE hComm = ::CreateFileA(portName.c_str(), GENERIC_READ | GENERIC_WRITE,
-                                     0, nullptr, OPEN_EXISTING, 0, nullptr);
+        HANDLE hComm
+            = ::CreateFileA(portName.c_str(), GENERIC_READ | GENERIC_WRITE, 0, nullptr, OPEN_EXISTING, 0, nullptr);
         if (hComm != INVALID_HANDLE_VALUE) {
             ::CloseHandle(hComm);
             const QString comName = QString("COM%1").arg(i);
@@ -155,7 +155,9 @@ void ConnectionWidget::refreshSerialPorts()
 #else
     QDir devDir("/dev");
     QStringList filters;
-    filters << "ttyUSB*" << "ttyACM*" << "ttyS*";
+    filters << "ttyUSB*"
+            << "ttyACM*"
+            << "ttyS*";
     const auto entries = devDir.entryList(filters, QDir::System);
     for (const auto& entry : entries) {
         cmbSerialPort->addItem("/dev/" + entry, "/dev/" + entry);
@@ -189,14 +191,13 @@ void ConnectionWidget::handleConnectClicked()
             portPath = cmbSerialPort->currentText();
         }
         const qint32 baud = cmbBaudRate->currentText().toInt();
-        transport = std::make_shared<FujinonSX800::SerialTransport>(
-            portPath.toStdString(), static_cast<std::uint32_t>(baud));
+        transport
+            = std::make_shared<FujinonSX800::SerialTransport>(portPath.toStdString(), static_cast<std::uint32_t>(baud));
     } else if (mode == 2) {
         // TCP Socket
         const QString host = editTcpHost->text();
         const auto port = static_cast<quint16>(spinTcpPort->value());
-        transport = std::make_shared<FujinonSX800::TcpTransport>(
-            host.toStdString(), static_cast<std::uint16_t>(port));
+        transport = std::make_shared<FujinonSX800::TcpTransport>(host.toStdString(), static_cast<std::uint16_t>(port));
     }
 
     if (transport) {

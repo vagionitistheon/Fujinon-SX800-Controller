@@ -113,11 +113,15 @@ std::vector<std::uint8_t> ProtocolBuilder::buildSetBaudRate(BaudRate rate) const
     return PelcoDFrame::createFrame(m_address, 0x00U, 0x67U, 0x00U, static_cast<std::uint8_t>(rate));
 }
 
-std::vector<std::uint8_t> ProtocolBuilder::buildSetRtcTime(
-    std::uint8_t year, std::uint8_t month, std::uint8_t day,
+std::vector<std::uint8_t> ProtocolBuilder::buildSetRtcTime(std::uint8_t year, std::uint8_t month, std::uint8_t day,
     std::uint8_t hour, std::uint8_t minute, std::uint8_t second) const
 {
-    (void)year; (void)month; (void)day; (void)hour; (void)minute; (void)second;
+    (void)year;
+    (void)month;
+    (void)day;
+    (void)hour;
+    (void)minute;
+    (void)second;
     return PelcoDFrame::createFrame(m_address, 0x00U, 0x77U, 0x00U, 0x00U);
 }
 
@@ -534,12 +538,18 @@ std::vector<std::uint8_t> ProtocolBuilder::buildMenuBack() const
 
 std::vector<std::uint8_t> ProtocolBuilder::buildMenuKey(MenuKey key) const
 {
-    if (key == MenuKey::Ok) return buildMenuOk();
-    if (key == MenuKey::Back) return buildMenuBack();
-    if (key == MenuKey::Up) return buildMenuDirection(MenuDirection::Up);
-    if (key == MenuKey::Down) return buildMenuDirection(MenuDirection::Down);
-    if (key == MenuKey::Left) return buildMenuDirection(MenuDirection::Left);
-    if (key == MenuKey::Right) return buildMenuDirection(MenuDirection::Right);
+    if (key == MenuKey::Ok)
+        return buildMenuOk();
+    if (key == MenuKey::Back)
+        return buildMenuBack();
+    if (key == MenuKey::Up)
+        return buildMenuDirection(MenuDirection::Up);
+    if (key == MenuKey::Down)
+        return buildMenuDirection(MenuDirection::Down);
+    if (key == MenuKey::Left)
+        return buildMenuDirection(MenuDirection::Left);
+    if (key == MenuKey::Right)
+        return buildMenuDirection(MenuDirection::Right);
     return buildMenuOk();
 }
 

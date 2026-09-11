@@ -33,3 +33,6 @@ target_link_libraries(FujinonSX800App PRIVATE
     FujinonSX800Qt
     Qt6::Widgets
 )
+
+apply_compiler_flags(FujinonSX800App)
+

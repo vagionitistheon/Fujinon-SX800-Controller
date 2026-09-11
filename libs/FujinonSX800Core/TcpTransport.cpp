@@ -1,37 +1,37 @@
 #include "TcpTransport.h"
 
 #ifdef _WIN32
-    #ifndef WIN32_LEAN_AND_MEAN
-        #define WIN32_LEAN_AND_MEAN
-    #endif
-    #ifndef NOMINMAX
-        #define NOMINMAX
-    #endif
-    #include <windows.h>
-    #include <winsock2.h>
-    #include <ws2tcpip.h>
+#ifndef WIN32_LEAN_AND_MEAN
+#define WIN32_LEAN_AND_MEAN
+#endif
+#ifndef NOMINMAX
+#define NOMINMAX
+#endif
+#include <windows.h>
+#include <winsock2.h>
+#include <ws2tcpip.h>
 
-    #define CLOSE_SOCKET(s) ::closesocket(s)
-    #define POLL_SOCKET(fds, nfds, timeout) ::WSAPoll(fds, nfds, timeout)
-    #define SEND_FLAGS 0
-    #define IS_WOULDBLOCK() (::WSAGetLastError() == WSAEWOULDBLOCK)
+#define CLOSE_SOCKET(s) ::closesocket(s)
+#define POLL_SOCKET(fds, nfds, timeout) ::WSAPoll(fds, nfds, timeout)
+#define SEND_FLAGS 0
+#define IS_WOULDBLOCK() (::WSAGetLastError() == WSAEWOULDBLOCK)
 #else
-    #include <arpa/inet.h>
-    #include <cerrno>
-    #include <cstring>
-    #include <fcntl.h>
-    #include <netdb.h>
-    #include <netinet/in.h>
-    #include <netinet/tcp.h>
-    #include <poll.h>
-    #include <sys/socket.h>
-    #include <sys/types.h>
-    #include <unistd.h>
+#include <arpa/inet.h>
+#include <cerrno>
+#include <cstring>
+#include <fcntl.h>
+#include <netdb.h>
+#include <netinet/in.h>
+#include <netinet/tcp.h>
+#include <poll.h>
+#include <sys/socket.h>
+#include <sys/types.h>
+#include <unistd.h>
 
-    #define CLOSE_SOCKET(s) ::close(s)
-    #define POLL_SOCKET(fds, nfds, timeout) ::poll(fds, nfds, timeout)
-    #define SEND_FLAGS MSG_NOSIGNAL
-    #define IS_WOULDBLOCK() (errno == EAGAIN || errno == EWOULDBLOCK)
+#define CLOSE_SOCKET(s) ::close(s)
+#define POLL_SOCKET(fds, nfds, timeout) ::poll(fds, nfds, timeout)
+#define SEND_FLAGS MSG_NOSIGNAL
+#define IS_WOULDBLOCK() (errno == EAGAIN || errno == EWOULDBLOCK)
 #endif
 
 #include <chrono>
@@ -42,65 +42,67 @@ namespace FujinonSX800 {
 namespace {
 
 #ifdef _WIN32
-struct WinsockInit {
-    WinsockInit() {
-        WSADATA wsaData {};
-        ::WSAStartup(MAKEWORD(2, 2), &wsaData);
-    }
-    ~WinsockInit() {
-        ::WSACleanup();
-    }
-};
+    struct WinsockInit {
+        WinsockInit()
+        {
+            WSADATA wsaData {};
+            ::WSAStartup(MAKEWORD(2, 2), &wsaData);
+        }
+        ~WinsockInit()
+        {
+            ::WSACleanup();
+        }
+    };
 
-void ensureWinsockInitialized() {
-    static WinsockInit init;
-}
+    void ensureWinsockInitialized()
+    {
+        static WinsockInit init;
+    }
 
-std::string getSocketErrorString(int errCode = 0)
-{
-    if (errCode == 0) {
-        errCode = ::WSAGetLastError();
+    std::string getSocketErrorString(int errCode = 0)
+    {
+        if (errCode == 0) {
+            errCode = ::WSAGetLastError();
+        }
+        char* errText = nullptr;
+        const DWORD len = FormatMessageA(
+            FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS, nullptr,
+            errCode, MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT), reinterpret_cast<LPSTR>(&errText), 0, nullptr);
+        std::string msg = (len > 0 && errText) ? std::string(errText) : "Winsock error " + std::to_string(errCode);
+        if (errText) {
+            LocalFree(errText);
+        }
+        while (!msg.empty() && (msg.back() == '\r' || msg.back() == '\n')) {
+            msg.pop_back();
+        }
+        return msg;
     }
-    char* errText = nullptr;
-    const DWORD len = FormatMessageA(
-        FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS,
-        nullptr, errCode, MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT),
-        reinterpret_cast<LPSTR>(&errText), 0, nullptr);
-    std::string msg = (len > 0 && errText) ? std::string(errText) : "Winsock error " + std::to_string(errCode);
-    if (errText) {
-        LocalFree(errText);
-    }
-    while (!msg.empty() && (msg.back() == '\r' || msg.back() == '\n')) {
-        msg.pop_back();
-    }
-    return msg;
-}
 
-bool setNonBlocking(SOCKET s, bool nonBlocking)
-{
-    u_long mode = nonBlocking ? 1 : 0;
-    return ::ioctlsocket(s, FIONBIO, &mode) == 0;
-}
+    bool setNonBlocking(SOCKET s, bool nonBlocking)
+    {
+        u_long mode = nonBlocking ? 1 : 0;
+        return ::ioctlsocket(s, FIONBIO, &mode) == 0;
+    }
 
 #else
 
-std::string getSocketErrorString(int errCode = 0)
-{
-    if (errCode == 0) {
-        errCode = errno;
+    std::string getSocketErrorString(int errCode = 0)
+    {
+        if (errCode == 0) {
+            errCode = errno;
+        }
+        return std::string(std::strerror(errCode));
     }
-    return std::string(std::strerror(errCode));
-}
 
-bool setNonBlocking(int fd, bool nonBlocking)
-{
-    const int flags = ::fcntl(fd, F_GETFL, 0);
-    if (flags == -1) {
-        return false;
+    bool setNonBlocking(int fd, bool nonBlocking)
+    {
+        const int flags = ::fcntl(fd, F_GETFL, 0);
+        if (flags == -1) {
+            return false;
+        }
+        const int newFlags = nonBlocking ? (flags | O_NONBLOCK) : (flags & ~O_NONBLOCK);
+        return ::fcntl(fd, F_SETFL, newFlags) == 0;
     }
-    const int newFlags = nonBlocking ? (flags | O_NONBLOCK) : (flags & ~O_NONBLOCK);
-    return ::fcntl(fd, F_SETFL, newFlags) == 0;
-}
 #endif
 
 } // namespace
@@ -163,7 +165,7 @@ bool TcpTransport::open()
     LOG(INFO) << "Connecting to TCP host " << host << ":" << port;
     notifyState(TransportState::Connecting, "Connecting to " + host + ":" + std::to_string(port));
 
-    struct addrinfo hints {};
+    struct addrinfo hints { };
     hints.ai_family = AF_UNSPEC;
     hints.ai_socktype = SOCK_STREAM;
     hints.ai_protocol = IPPROTO_TCP;
@@ -196,7 +198,11 @@ bool TcpTransport::open()
         // Non-blocking connection with 2-second timeout
         setNonBlocking(s, true);
 
+#ifdef _WIN32
         const int connResult = ::connect(s, p->ai_addr, static_cast<int>(p->ai_addrlen));
+#else
+        const int connResult = ::connect(s, p->ai_addr, static_cast<socklen_t>(p->ai_addrlen));
+#endif
         bool connectedOk = (connResult == 0);
 
         if (!connectedOk) {
@@ -212,7 +218,7 @@ bool TcpTransport::open()
                 FD_ZERO(&writeFds);
                 FD_SET(s, &writeFds);
 
-                struct timeval timeout {};
+                struct timeval timeout { };
                 timeout.tv_sec = 2; // 2 seconds connect timeout
                 timeout.tv_usec = 0;
 
@@ -300,15 +306,10 @@ bool TcpTransport::sendData(const std::vector<std::uint8_t>& data)
     while (totalSent < toSend && m_running.load()) {
         const auto sent = ::send(
 #ifdef _WIN32
-            static_cast<SOCKET>(m_sockfd),
-            reinterpret_cast<const char*>(data.data() + totalSent),
-            static_cast<int>(toSend - totalSent),
-            SEND_FLAGS
+            static_cast<SOCKET>(m_sockfd), reinterpret_cast<const char*>(data.data() + totalSent),
+            static_cast<int>(toSend - totalSent), SEND_FLAGS
 #else
-            m_sockfd,
-            data.data() + totalSent,
-            toSend - totalSent,
-            SEND_FLAGS
+            m_sockfd, data.data() + totalSent, toSend - totalSent, SEND_FLAGS
 #endif
         );
 
@@ -322,7 +323,7 @@ bool TcpTransport::sendData(const std::vector<std::uint8_t>& data)
                 pfd.events = POLLOUT;
                 POLL_SOCKET(&pfd, 1, 50);
 #else
-                struct pollfd pfd {};
+                struct pollfd pfd { };
                 pfd.fd = m_sockfd;
                 pfd.events = POLLOUT;
                 POLL_SOCKET(&pfd, 1, 50);
@@ -363,7 +364,7 @@ void TcpTransport::readWorker()
         pfd.fd = static_cast<SOCKET>(m_sockfd);
         pfd.events = POLLIN;
 #else
-        struct pollfd pfd {};
+        struct pollfd pfd { };
         pfd.fd = m_sockfd;
         pfd.events = POLLIN;
 #endif
@@ -372,21 +373,15 @@ void TcpTransport::readWorker()
         if (ret > 0 && (pfd.revents & POLLIN)) {
             const auto bytesRead = ::recv(
 #ifdef _WIN32
-                static_cast<SOCKET>(m_sockfd),
-                reinterpret_cast<char*>(buffer.data()),
-                static_cast<int>(buffer.size()),
+                static_cast<SOCKET>(m_sockfd), reinterpret_cast<char*>(buffer.data()), static_cast<int>(buffer.size()),
                 0
 #else
-                m_sockfd,
-                buffer.data(),
-                buffer.size(),
-                0
+                m_sockfd, buffer.data(), buffer.size(), 0
 #endif
             );
 
             if (bytesRead > 0) {
-                std::vector<std::uint8_t> chunk(
-                    buffer.begin(), buffer.begin() + bytesRead);
+                std::vector<std::uint8_t> chunk(buffer.begin(), buffer.begin() + bytesRead);
 
                 DataReceivedCallback cb;
                 {

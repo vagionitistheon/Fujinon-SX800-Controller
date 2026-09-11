@@ -22,9 +22,7 @@ class QFujinonCamera : public QObject {
     Q_OBJECT
 
 public:
-    explicit QFujinonCamera(
-        std::shared_ptr<FujinonSX800::ITransport> transport = nullptr,
-        std::uint8_t address = 1U,
+    explicit QFujinonCamera(std::shared_ptr<FujinonSX800::ITransport> transport = nullptr, std::uint8_t address = 1U,
         QObject* parent = nullptr);
     ~QFujinonCamera() override;
 
@@ -36,8 +34,14 @@ public:
     [[nodiscard]] FujinonSX800::FujinonCamera* coreCamera() const noexcept;
 
     // Lifecycle compatibility wrappers
-    bool start() { return connectCamera(); }
-    void stop() { disconnectCamera(); }
+    bool start()
+    {
+        return connectCamera();
+    }
+    void stop()
+    {
+        disconnectCamera();
+    }
 
     void setAutoQueryOnConnect(bool enable);
     void setTelemetryPolling(bool enable, int intervalMs = 1000);
@@ -69,11 +73,17 @@ public slots:
 
     // Auto Focus & Exposure
     void setOnePushAf();
-    void triggerOnePushAf() { setOnePushAf(); }
+    void triggerOnePushAf()
+    {
+        setOnePushAf();
+    }
     void setAutoFocus(bool enable);
     void setAutoFocusMode(FujinonSX800::AutoFocusMode mode);
     void setAutoIris(bool enable);
-    void setManualIris(int pos) { setIrisPosition(pos); }
+    void setManualIris(int pos)
+    {
+        setIrisPosition(pos);
+    }
     void setManualIrisFNo(FujinonSX800::ManualIrisFNo fNo);
     void setShutterLimit(FujinonSX800::ShutterLimitMode limit);
     void setAgc(bool enable);

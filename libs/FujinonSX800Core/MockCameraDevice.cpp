@@ -25,8 +25,7 @@ void MockCameraDevice::setInternalState(const MockInternalState& state)
 bool MockCameraDevice::open()
 {
     m_open = true;
-    LOG(INFO) << "MockCameraDevice opened (simulating camera address: "
-              << static_cast<int>(m_address) << ")";
+    LOG(INFO) << "MockCameraDevice opened (simulating camera address: " << static_cast<int>(m_address) << ")";
     StateChangedCallback cb;
     {
         std::lock_guard<std::mutex> lock(m_callbackMutex);
@@ -97,8 +96,8 @@ void MockCameraDevice::processIncomingFrame(const std::vector<std::uint8_t>& fra
 
     const std::uint8_t cmd1 { frame[2] };
     const std::uint8_t cmd2 { frame[3] };
-    const std::uint8_t d1   { frame[4] };
-    const std::uint8_t d2   { frame[5] };
+    const std::uint8_t d1 { frame[4] };
+    const std::uint8_t d2 { frame[5] };
 
     std::vector<std::uint8_t> response;
 

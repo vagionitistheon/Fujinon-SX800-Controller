@@ -7,9 +7,7 @@
 namespace FujinonSX800 {
 
 bool ProtocolParser::parsePacket(
-    const std::vector<std::uint8_t>& packet,
-    CameraStatus& status,
-    std::string_view lastQuery) noexcept
+    const std::vector<std::uint8_t>& packet, CameraStatus& status, std::string_view lastQuery) noexcept
 {
     if (!PelcoDFrame::isValidFrame(packet)) {
         LOG(WARNING) << "ProtocolParser rejected invalid frame (checksum or format failure)";
@@ -32,8 +30,7 @@ bool ProtocolParser::parsePacket(
     return false;
 }
 
-bool ProtocolParser::parseGeneralAck(
-    const std::vector<std::uint8_t>& packet, CameraStatus& status) noexcept
+bool ProtocolParser::parseGeneralAck(const std::vector<std::uint8_t>& packet, CameraStatus& status) noexcept
 {
     status.address = packet[1];
     status.rs485Address = packet[1];
@@ -42,8 +39,7 @@ bool ProtocolParser::parseGeneralAck(
     return true;
 }
 
-bool ProtocolParser::parseExtendedResponse(
-    const std::vector<std::uint8_t>& packet, CameraStatus& status) noexcept
+bool ProtocolParser::parseExtendedResponse(const std::vector<std::uint8_t>& packet, CameraStatus& status) noexcept
 {
     status.address = packet[1];
     status.rs485Address = packet[1];
@@ -52,8 +48,8 @@ bool ProtocolParser::parseExtendedResponse(
 
     const std::uint8_t resp1 { packet[2] };
     const std::uint8_t resp2 { packet[3] };
-    const std::uint8_t d1    { packet[4] };
-    const std::uint8_t d2    { packet[5] };
+    const std::uint8_t d1 { packet[4] };
+    const std::uint8_t d2 { packet[5] };
 
     // Standard & FF Extended Commands (RESP1 == 0x00)
     if (resp1 == 0x00U) {
@@ -82,14 +78,14 @@ bool ProtocolParser::parseExtendedResponse(
         }
         case 0x8DU: { // Lens status response
             status.irisCloseLimit = (d1 & 0x01U) != 0U;
-            status.irisOpenLimit  = (d1 & 0x02U) != 0U;
-            status.irisMoving     = (d1 & 0x04U) != 0U;
-            status.focusFarLimit  = (d1 & 0x08U) != 0U;
+            status.irisOpenLimit = (d1 & 0x02U) != 0U;
+            status.irisMoving = (d1 & 0x04U) != 0U;
+            status.focusFarLimit = (d1 & 0x08U) != 0U;
             status.focusNearLimit = (d1 & 0x10U) != 0U;
-            status.focusMoving    = (d1 & 0x20U) != 0U;
-            status.zoomMoving     = (d2 & 0x01U) != 0U;
-            status.zoomTeleLimit  = (d2 & 0x02U) != 0U;
-            status.zoomWideLimit  = (d2 & 0x04U) != 0U;
+            status.focusMoving = (d1 & 0x20U) != 0U;
+            status.zoomMoving = (d2 & 0x01U) != 0U;
+            status.zoomTeleLimit = (d2 & 0x02U) != 0U;
+            status.zoomWideLimit = (d2 & 0x04U) != 0U;
             return true;
         }
         case 0x91U: { // Manual Iris position / F-number response
@@ -406,9 +402,7 @@ bool ProtocolParser::parseExtendedResponse(
 }
 
 bool ProtocolParser::parseQueryResponse(
-    const std::vector<std::uint8_t>& packet,
-    CameraStatus& status,
-    std::string_view lastQuery) noexcept
+    const std::vector<std::uint8_t>& packet, CameraStatus& status, std::string_view lastQuery) noexcept
 {
     status.address = packet[1];
     status.rs485Address = packet[1];
@@ -551,26 +545,46 @@ std::string ProtocolParser::describeFrame(const std::vector<std::uint8_t>& frame
         const std::uint8_t cmd1 = frame[2];
         const std::uint8_t cmd2 = frame[3];
 
-        if (cmd1 == 0x00U && cmd2 == 0x20U) return "Zoom Tele";
-        if (cmd1 == 0x00U && cmd2 == 0x40U) return "Zoom Wide";
-        if (cmd1 == 0x01U && cmd2 == 0x00U) return "Focus Near";
-        if (cmd1 == 0x00U && cmd2 == 0x80U) return "Focus Far";
-        if (cmd1 == 0x00U && cmd2 == 0x00U) return "Motion Stop";
-        if (cmd1 == 0x00U && cmd2 == 0x4FU) return "Set Zoom Position";
-        if (cmd1 == 0x00U && cmd2 == 0x8FU) return "Set Focus Position";
-        if (cmd1 == 0x00U && cmd2 == 0x55U) return "Query Zoom Position";
-        if (cmd1 == 0x00U && cmd2 == 0x5DU) return "Zoom Position Response";
-        if (cmd1 == 0x00U && cmd2 == 0x73U) return "Query Focus Position";
-        if (cmd1 == 0x00U && cmd2 == 0x81U) return "Focus Position Response";
-        if (cmd1 == 0x00U && cmd2 == 0x7DU) return "Query FW Version";
-        if (cmd1 == 0x00U && cmd2 == 0x8BU) return "FW Version Response";
-        if (cmd1 == 0x00U && cmd2 == 0x7FU) return "Query Lens Status";
-        if (cmd1 == 0x00U && cmd2 == 0x8DU) return "Lens Status Response";
-        if (cmd1 == 0xF0U && cmd2 == 0x07U) return "One-Push AF";
-        if (cmd1 == 0xF0U && cmd2 == 0x21U) return "Set VLC Filter";
-        if (cmd1 == 0xF0U && cmd2 == 0x29U) return "Set Defog Mode";
-        if (cmd1 == 0xF0U && cmd2 == 0x27U) return "Set De-Heat Haze";
-        if (cmd1 == 0xF0U && cmd2 == 0x8BU) return "Virtual Menu Key";
+        if (cmd1 == 0x00U && cmd2 == 0x20U)
+            return "Zoom Tele";
+        if (cmd1 == 0x00U && cmd2 == 0x40U)
+            return "Zoom Wide";
+        if (cmd1 == 0x01U && cmd2 == 0x00U)
+            return "Focus Near";
+        if (cmd1 == 0x00U && cmd2 == 0x80U)
+            return "Focus Far";
+        if (cmd1 == 0x00U && cmd2 == 0x00U)
+            return "Motion Stop";
+        if (cmd1 == 0x00U && cmd2 == 0x4FU)
+            return "Set Zoom Position";
+        if (cmd1 == 0x00U && cmd2 == 0x8FU)
+            return "Set Focus Position";
+        if (cmd1 == 0x00U && cmd2 == 0x55U)
+            return "Query Zoom Position";
+        if (cmd1 == 0x00U && cmd2 == 0x5DU)
+            return "Zoom Position Response";
+        if (cmd1 == 0x00U && cmd2 == 0x73U)
+            return "Query Focus Position";
+        if (cmd1 == 0x00U && cmd2 == 0x81U)
+            return "Focus Position Response";
+        if (cmd1 == 0x00U && cmd2 == 0x7DU)
+            return "Query FW Version";
+        if (cmd1 == 0x00U && cmd2 == 0x8BU)
+            return "FW Version Response";
+        if (cmd1 == 0x00U && cmd2 == 0x7FU)
+            return "Query Lens Status";
+        if (cmd1 == 0x00U && cmd2 == 0x8DU)
+            return "Lens Status Response";
+        if (cmd1 == 0xF0U && cmd2 == 0x07U)
+            return "One-Push AF";
+        if (cmd1 == 0xF0U && cmd2 == 0x21U)
+            return "Set VLC Filter";
+        if (cmd1 == 0xF0U && cmd2 == 0x29U)
+            return "Set Defog Mode";
+        if (cmd1 == 0xF0U && cmd2 == 0x27U)
+            return "Set De-Heat Haze";
+        if (cmd1 == 0xF0U && cmd2 == 0x8BU)
+            return "Virtual Menu Key";
 
         char buf[32];
         std::snprintf(buf, sizeof(buf), "Cmd [0x%02X, 0x%02X]", cmd1, cmd2);

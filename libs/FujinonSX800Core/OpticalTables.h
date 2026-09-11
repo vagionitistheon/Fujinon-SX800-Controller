@@ -45,9 +45,7 @@ public:
     /// @param[in] imageWidthPixels Active horizontal pixel count (default: 1920).
     /// @return IFOV in milliradians (mrad).
     [[nodiscard]] static double calculateIfovMrad(
-        double focalLengthMm,
-        double sensorWidthMm = 7.8,
-        std::uint32_t imageWidthPixels = 1920U) noexcept;
+        double focalLengthMm, double sensorWidthMm = 7.8, std::uint32_t imageWidthPixels = 1920U) noexcept;
 
     /// @brief Converts focal length in millimeters to closest 16-bit zoom pulse.
     /// @param[in] focalLengthMm Desired focal length in mm.
@@ -60,8 +58,7 @@ public:
     [[nodiscard]] static double pulseToDistance(std::uint16_t pulse) noexcept;
 
 private:
-    [[nodiscard]] static double interpolate(
-        std::uint16_t pulse, const std::vector<OpticalEntry>& table) noexcept;
+    [[nodiscard]] static double interpolate(std::uint16_t pulse, const std::vector<OpticalEntry>& table) noexcept;
 
     [[nodiscard]] static std::uint16_t inverseInterpolate(
         double value, const std::vector<OpticalEntry>& table) noexcept;

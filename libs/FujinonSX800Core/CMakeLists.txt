@@ -38,3 +38,5 @@ target_link_libraries(FujinonSX800Core PUBLIC
 if(WIN32)
     target_link_libraries(FujinonSX800Core PUBLIC ws2_32)
 endif()
+
+apply_compiler_flags(FujinonSX800Core)

@@ -95,7 +95,7 @@ void TrafficInspectorWidget::logFrame(const QByteArray& frame, bool isTx)
     const QString timeStr = QDateTime::currentDateTime().toString("hh:mm:ss.zzz");
     const QString dirStr = isTx ? "TX  >>" : "RX  <<";
 
-    std::vector<std::uint8_t> stdBytes(frame.size());
+    std::vector<std::uint8_t> stdBytes(static_cast<std::size_t>(frame.size()));
     for (qsizetype i { 0 }; i < frame.size(); ++i) {
         stdBytes[static_cast<std::size_t>(i)] = static_cast<std::uint8_t>(frame.at(i));
     }

@@ -113,7 +113,8 @@ void OsdVideoTab::setupUi()
 
     videoLayout->addWidget(new QLabel(tr("Video Display Mode:"), grpVideo), 2, 0);
     cmbVideoDisplayMode = new QComboBox(grpVideo);
-    cmbVideoDisplayMode->addItem(tr("Fit (Aspect Ratio Preserved)"), static_cast<int>(FujinonSX800::VideoDisplayMode::Fit));
+    cmbVideoDisplayMode->addItem(
+        tr("Fit (Aspect Ratio Preserved)"), static_cast<int>(FujinonSX800::VideoDisplayMode::Fit));
     cmbVideoDisplayMode->addItem(tr("Fill (Full Screen)"), static_cast<int>(FujinonSX800::VideoDisplayMode::Fill));
     videoLayout->addWidget(cmbVideoDisplayMode, 2, 1);
 
@@ -143,9 +144,7 @@ void OsdVideoTab::setupConnections()
         cam->setOsdIdPosition(pos);
     });
 
-    connect(btnSyncRtc, &QPushButton::clicked, this, [this]() {
-        cam->setRtcTime(editRtcTime->dateTime());
-    });
+    connect(btnSyncRtc, &QPushButton::clicked, this, [this]() { cam->setRtcTime(editRtcTime->dateTime()); });
 
     connect(cmbVideoStandard, QOverload<int>::of(&QComboBox::currentIndexChanged), this, [this]() {
         const auto std = static_cast<FujinonSX800::VideoStandard>(cmbVideoStandard->currentData().toInt());

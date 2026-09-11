@@ -26,15 +26,7 @@ std::uint8_t PelcoDFrame::calculateChecksum(const std::uint8_t* data, std::size_
 std::vector<std::uint8_t> PelcoDFrame::createFrame(
     std::uint8_t address, std::uint8_t cmd1, std::uint8_t cmd2, std::uint8_t data1, std::uint8_t data2)
 {
-    std::vector<std::uint8_t> frame {
-        SyncByte,
-        address,
-        cmd1,
-        cmd2,
-        data1,
-        data2,
-        0x00U
-    };
+    std::vector<std::uint8_t> frame { SyncByte, address, cmd1, cmd2, data1, data2, 0x00U };
 
     frame[6] = calculateChecksum(&frame[1], 5U);
     return frame;
@@ -58,8 +50,7 @@ bool PelcoDFrame::isValidFrame(const std::vector<std::uint8_t>& frame) noexcept
     return expectedChecksum == calculatedChecksum;
 }
 
-std::vector<std::vector<std::uint8_t>> PelcoDFrame::splitStream(
-    const std::vector<std::uint8_t>& stream)
+std::vector<std::vector<std::uint8_t>> PelcoDFrame::splitStream(const std::vector<std::uint8_t>& stream)
 {
     std::vector<std::vector<std::uint8_t>> frames;
     if (stream.empty()) {
@@ -89,7 +80,7 @@ std::vector<std::vector<std::uint8_t>> PelcoDFrame::splitStream(
 
                 if (expectedCksm == computedCksm) {
                     frames.emplace_back(stream.begin() + static_cast<std::ptrdiff_t>(idx),
-                                        stream.begin() + static_cast<std::ptrdiff_t>(idx + candidateSize));
+                        stream.begin() + static_cast<std::ptrdiff_t>(idx + candidateSize));
                     idx += candidateSize;
                     matched = true;
                     break;

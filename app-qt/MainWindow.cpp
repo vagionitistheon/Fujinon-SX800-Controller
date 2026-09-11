@@ -75,11 +75,10 @@ void MainWindow::setupConnections()
     connect(inspectorWidget, &TrafficInspectorWidget::sendRawHexRequested, camera,
         &FujinonSX800Qt::QFujinonCamera::sendRawHex);
 
-    connect(camera, &FujinonSX800Qt::QFujinonCamera::queryTimeoutOccurred, this,
-        [this](const QString& tag) {
-            const QString warnMsg = tr("Warning: Timeout waiting for response to '%1'").arg(tag);
-            statusBar()->showMessage(warnMsg, 5000);
-        });
+    connect(camera, &FujinonSX800Qt::QFujinonCamera::queryTimeoutOccurred, this, [this](const QString& tag) {
+        const QString warnMsg = tr("Warning: Timeout waiting for response to '%1'").arg(tag);
+        statusBar()->showMessage(warnMsg, 5000);
+    });
 }
 
 void MainWindow::handleConnect(std::shared_ptr<FujinonSX800::ITransport> transport, std::uint8_t address)

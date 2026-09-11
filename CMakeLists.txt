@@ -5,12 +5,10 @@ set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
-# Strict warning flags as per project rules
-if(MSVC)
-    add_compile_options(/W4 /permissive-)
-else()
-    add_compile_options(-Wall -Wextra -pedantic -Werror=return-type)
-endif()
+# Compiler flags, security hardening, sanitizers, and warnings
+list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake")
+include(CompilerFlags)
+include(GitHooks)
 
 find_package(Threads REQUIRED)
 find_package(glog REQUIRED)

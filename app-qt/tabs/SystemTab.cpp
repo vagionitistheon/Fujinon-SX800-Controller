@@ -182,9 +182,8 @@ void SystemTab::setupConnections()
 
     connect(btnRefreshAll, &QPushButton::clicked, cam, &FujinonSX800Qt::QFujinonCamera::refreshStatus);
 
-    connect(chkContinuousPolling, &QCheckBox::toggled, this, [this](bool checked) {
-        cam->setTelemetryPolling(checked, spinPollInterval->value());
-    });
+    connect(chkContinuousPolling, &QCheckBox::toggled, this,
+        [this](bool checked) { cam->setTelemetryPolling(checked, spinPollInterval->value()); });
 
     connect(spinPollInterval, QOverload<int>::of(&QSpinBox::valueChanged), this, [this](int val) {
         if (chkContinuousPolling->isChecked()) {

@@ -47,8 +47,7 @@ public:
     /// @brief Splits contiguous byte stream into valid individual Pelco-D frames.
     /// @param[in] stream Raw input byte buffer.
     /// @return Collection of distinct verified packet frames.
-    [[nodiscard]] static std::vector<std::vector<std::uint8_t>> splitStream(
-        const std::vector<std::uint8_t>& stream);
+    [[nodiscard]] static std::vector<std::vector<std::uint8_t>> splitStream(const std::vector<std::uint8_t>& stream);
 };
 
 } // namespace FujinonSX800

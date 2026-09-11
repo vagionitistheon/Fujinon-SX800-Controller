@@ -23,28 +23,21 @@ public:
     /// @param[in] lastQuery Optional hint about the last query dispatched (for 18-byte payloads).
     /// @return True if frame was recognized and decoded.
     [[nodiscard]] static bool parsePacket(
-        const std::vector<std::uint8_t>& packet,
-        CameraStatus& status,
-        std::string_view lastQuery = {}) noexcept;
+        const std::vector<std::uint8_t>& packet, CameraStatus& status, std::string_view lastQuery = {}) noexcept;
 
     /// @brief Generates human-readable description string for a Pelco-D frame.
     /// @param[in] frame Raw frame bytes.
     /// @param[in] isTx True if outbound command, false if inbound response.
     /// @return Descriptive string.
-    [[nodiscard]] static std::string describeFrame(
-        const std::vector<std::uint8_t>& frame, bool isTx = true);
+    [[nodiscard]] static std::string describeFrame(const std::vector<std::uint8_t>& frame, bool isTx = true);
 
 private:
-    static bool parseGeneralAck(
-        const std::vector<std::uint8_t>& packet, CameraStatus& status) noexcept;
+    static bool parseGeneralAck(const std::vector<std::uint8_t>& packet, CameraStatus& status) noexcept;
 
-    static bool parseExtendedResponse(
-        const std::vector<std::uint8_t>& packet, CameraStatus& status) noexcept;
+    static bool parseExtendedResponse(const std::vector<std::uint8_t>& packet, CameraStatus& status) noexcept;
 
     static bool parseQueryResponse(
-        const std::vector<std::uint8_t>& packet,
-        CameraStatus& status,
-        std::string_view lastQuery) noexcept;
+        const std::vector<std::uint8_t>& packet, CameraStatus& status, std::string_view lastQuery) noexcept;
 };
 
 } // namespace FujinonSX800

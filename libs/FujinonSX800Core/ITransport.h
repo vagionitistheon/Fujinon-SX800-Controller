@@ -12,12 +12,7 @@ namespace FujinonSX800 {
 
 /// @enum TransportState
 /// @brief Connection state of the physical or simulated transport channel.
-enum class TransportState : std::uint8_t {
-    Disconnected = 0x00U,
-    Connecting = 0x01U,
-    Connected = 0x02U,
-    Error = 0x03U
-};
+enum class TransportState : std::uint8_t { Disconnected = 0x00U, Connecting = 0x01U, Connected = 0x02U, Error = 0x03U };
 
 /// @class ITransport
 /// @brief Pure virtual interface defining raw byte streaming and lifecycle.

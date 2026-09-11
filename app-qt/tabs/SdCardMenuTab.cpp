@@ -136,21 +136,16 @@ void SdCardMenuTab::setupConnections()
         const auto mode = static_cast<FujinonSX800::SdPlaybackMode>(cmbPlaybackMode->currentData().toInt());
         cam->setSdPlaybackSpeed(mode);
     });
-    connect(btnPlay, &QPushButton::clicked, this, [this]() {
-        cam->setSdPlayback(FujinonSX800::SdPlaybackControl::PlayPause);
-    });
-    connect(btnPause, &QPushButton::clicked, this, [this]() {
-        cam->setSdPlayback(FujinonSX800::SdPlaybackControl::PlayPause);
-    });
-    connect(btnStopMovie, &QPushButton::clicked, this, [this]() {
-        cam->setSdPlayback(FujinonSX800::SdPlaybackControl::Stop);
-    });
-    connect(btnFastForward, &QPushButton::clicked, this, [this]() {
-        cam->setSdPlayback(FujinonSX800::SdPlaybackControl::FastForward);
-    });
-    connect(btnRewind, &QPushButton::clicked, this, [this]() {
-        cam->setSdPlayback(FujinonSX800::SdPlaybackControl::FastRewind);
-    });
+    connect(btnPlay, &QPushButton::clicked, this,
+        [this]() { cam->setSdPlayback(FujinonSX800::SdPlaybackControl::PlayPause); });
+    connect(btnPause, &QPushButton::clicked, this,
+        [this]() { cam->setSdPlayback(FujinonSX800::SdPlaybackControl::PlayPause); });
+    connect(btnStopMovie, &QPushButton::clicked, this,
+        [this]() { cam->setSdPlayback(FujinonSX800::SdPlaybackControl::Stop); });
+    connect(btnFastForward, &QPushButton::clicked, this,
+        [this]() { cam->setSdPlayback(FujinonSX800::SdPlaybackControl::FastForward); });
+    connect(btnRewind, &QPushButton::clicked, this,
+        [this]() { cam->setSdPlayback(FujinonSX800::SdPlaybackControl::FastRewind); });
 
     // Format
     connect(btnFormatSd, &QPushButton::clicked, this, [this]() {

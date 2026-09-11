@@ -1,23 +1,23 @@
 #include "SerialTransport.h"
 
 #ifdef _WIN32
-    #ifndef WIN32_LEAN_AND_MEAN
-        #define WIN32_LEAN_AND_MEAN
-    #endif
-    #ifndef NOMINMAX
-        #define NOMINMAX
-    #endif
-    #include <windows.h>
+#ifndef WIN32_LEAN_AND_MEAN
+#define WIN32_LEAN_AND_MEAN
+#endif
+#ifndef NOMINMAX
+#define NOMINMAX
+#endif
+#include <windows.h>
 #else
-    #include <cerrno>
-    #include <cstring>
-    #include <fcntl.h>
-    #include <poll.h>
-    #include <sys/ioctl.h>
-    #include <sys/stat.h>
-    #include <sys/types.h>
-    #include <termios.h>
-    #include <unistd.h>
+#include <cerrno>
+#include <cstring>
+#include <fcntl.h>
+#include <poll.h>
+#include <sys/ioctl.h>
+#include <sys/stat.h>
+#include <sys/types.h>
+#include <termios.h>
+#include <unistd.h>
 #endif
 
 #include <chrono>
@@ -28,36 +28,43 @@ namespace FujinonSX800 {
 namespace {
 
 #ifdef _WIN32
-std::string getWin32ErrorString(DWORD errCode)
-{
-    char* errText = nullptr;
-    const DWORD len = FormatMessageA(
-        FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS,
-        nullptr, errCode, MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT),
-        reinterpret_cast<LPSTR>(&errText), 0, nullptr);
-    std::string msg = (len > 0 && errText) ? std::string(errText) : "Error code " + std::to_string(errCode);
-    if (errText) {
-        LocalFree(errText);
+    std::string getWin32ErrorString(DWORD errCode)
+    {
+        char* errText = nullptr;
+        const DWORD len = FormatMessageA(
+            FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS, nullptr,
+            errCode, MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT), reinterpret_cast<LPSTR>(&errText), 0, nullptr);
+        std::string msg = (len > 0 && errText) ? std::string(errText) : "Error code " + std::to_string(errCode);
+        if (errText) {
+            LocalFree(errText);
+        }
+        while (!msg.empty() && (msg.back() == '\r' || msg.back() == '\n')) {
+            msg.pop_back();
+        }
+        return msg;
     }
-    while (!msg.empty() && (msg.back() == '\r' || msg.back() == '\n')) {
-        msg.pop_back();
-    }
-    return msg;
-}
 #else
-speed_t getTermiosSpeed(std::uint32_t baudRate) noexcept
-{
-    switch (baudRate) {
-    case 2400U:   return B2400;
-    case 4800U:   return B4800;
-    case 9600U:   return B9600;
-    case 19200U:  return B19200;
-    case 38400U:  return B38400;
-    case 57600U:  return B57600;
-    case 115200U: return B115200;
-    default:      return B9600;
+    speed_t getTermiosSpeed(std::uint32_t baudRate) noexcept
+    {
+        switch (baudRate) {
+        case 2400U:
+            return B2400;
+        case 4800U:
+            return B4800;
+        case 9600U:
+            return B9600;
+        case 19200U:
+            return B19200;
+        case 38400U:
+            return B38400;
+        case 57600U:
+            return B57600;
+        case 115200U:
+            return B115200;
+        default:
+            return B9600;
+        }
     }
-}
 #endif
 
 } // namespace
@@ -122,14 +129,7 @@ bool SerialTransport::open()
     }
 
     HANDLE hComm = ::CreateFileA(
-        portPath.c_str(),
-        GENERIC_READ | GENERIC_WRITE,
-        0,
-        nullptr,
-        OPEN_EXISTING,
-        FILE_ATTRIBUTE_NORMAL,
-        nullptr
-    );
+        portPath.c_str(), GENERIC_READ | GENERIC_WRITE, 0, nullptr, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, nullptr);
 
     if (hComm == INVALID_HANDLE_VALUE) {
         const std::string errStr = getWin32ErrorString(::GetLastError());
@@ -189,12 +189,12 @@ bool SerialTransport::configurePort()
     dcbSerialParams.BaudRate = baud;
     dcbSerialParams.ByteSize = 8;
     dcbSerialParams.StopBits = ONESTOPBIT;
-    dcbSerialParams.Parity   = NOPARITY;
+    dcbSerialParams.Parity = NOPARITY;
     dcbSerialParams.fOutxCtsFlow = FALSE;
-    dcbSerialParams.fRtsControl  = RTS_CONTROL_DISABLE;
-    dcbSerialParams.fOutX        = FALSE;
-    dcbSerialParams.fInX         = FALSE;
-    dcbSerialParams.fDtrControl  = DTR_CONTROL_ENABLE;
+    dcbSerialParams.fRtsControl = RTS_CONTROL_DISABLE;
+    dcbSerialParams.fOutX = FALSE;
+    dcbSerialParams.fInX = FALSE;
+    dcbSerialParams.fDtrControl = DTR_CONTROL_ENABLE;
 
     if (!::SetCommState(m_handle, &dcbSerialParams)) {
         const std::string errStr = getWin32ErrorString(::GetLastError());
@@ -219,7 +219,7 @@ bool SerialTransport::configurePort()
     return true;
 
 #else
-    struct termios tty {};
+    struct termios tty { };
     if (::tcgetattr(m_handle, &tty) != 0) {
         const std::string errStr = std::strerror(errno);
         notifyState(TransportState::Error, "tcgetattr failed: " + errStr);
@@ -244,7 +244,7 @@ bool SerialTransport::configurePort()
     tty.c_iflag &= static_cast<tcflag_t>(~(IXON | IXOFF | IXANY | ICRNL | INLCR | IGNCR));
     tty.c_oflag &= static_cast<tcflag_t>(~OPOST);
 
-    tty.c_cc[VMIN]  = 0;
+    tty.c_cc[VMIN] = 0;
     tty.c_cc[VTIME] = 1;
 
     if (::tcsetattr(m_handle, TCSANOW, &tty) != 0) {
@@ -293,13 +293,7 @@ bool SerialTransport::sendData(const std::vector<std::uint8_t>& data)
 
 #ifdef _WIN32
     DWORD bytesWritten = 0;
-    const BOOL success = ::WriteFile(
-        m_handle,
-        data.data(),
-        static_cast<DWORD>(data.size()),
-        &bytesWritten,
-        nullptr
-    );
+    const BOOL success = ::WriteFile(m_handle, data.data(), static_cast<DWORD>(data.size()), &bytesWritten, nullptr);
     return success && (bytesWritten == static_cast<DWORD>(data.size()));
 
 #else
@@ -307,14 +301,13 @@ bool SerialTransport::sendData(const std::vector<std::uint8_t>& data)
     const std::size_t toWrite { data.size() };
 
     while (totalWritten < toWrite && m_running.load()) {
-        const ssize_t written = ::write(
-            m_handle, data.data() + totalWritten, toWrite - totalWritten);
+        const ssize_t written = ::write(m_handle, data.data() + totalWritten, toWrite - totalWritten);
 
         if (written > 0) {
             totalWritten += static_cast<std::size_t>(written);
         } else if (written < 0) {
             if (errno == EAGAIN || errno == EWOULDBLOCK) {
-                struct pollfd pfd {};
+                struct pollfd pfd { };
                 pfd.fd = m_handle;
                 pfd.events = POLLOUT;
                 ::poll(&pfd, 1, 50);
@@ -352,13 +345,8 @@ void SerialTransport::readWorker()
 #ifdef _WIN32
     while (m_running.load()) {
         DWORD bytesRead = 0;
-        const BOOL success = ::ReadFile(
-            m_handle,
-            buffer.data(),
-            static_cast<DWORD>(buffer.size()),
-            &bytesRead,
-            nullptr
-        );
+        const BOOL success
+            = ::ReadFile(m_handle, buffer.data(), static_cast<DWORD>(buffer.size()), &bytesRead, nullptr);
 
         if (success) {
             if (bytesRead > 0) {
@@ -385,7 +373,7 @@ void SerialTransport::readWorker()
 
 #else
     while (m_running.load()) {
-        struct pollfd pfd {};
+        struct pollfd pfd { };
         pfd.fd = m_handle;
         pfd.events = POLLIN;
 
@@ -393,8 +381,7 @@ void SerialTransport::readWorker()
         if (ret > 0 && (pfd.revents & POLLIN)) {
             const ssize_t bytesRead = ::read(m_handle, buffer.data(), buffer.size());
             if (bytesRead > 0) {
-                std::vector<std::uint8_t> chunk(
-                    buffer.begin(), buffer.begin() + bytesRead);
+                std::vector<std::uint8_t> chunk(buffer.begin(), buffer.begin() + bytesRead);
 
                 DataReceivedCallback cb;
                 {

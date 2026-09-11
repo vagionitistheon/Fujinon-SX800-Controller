@@ -21,7 +21,7 @@ static void testBasicOperations()
     assert(ring.availableRead() == 0);
     assert(ring.availableWrite() == 1024);
 
-    const std::vector<std::uint8_t> testData = {0xAA, 0xBB, 0xCC, 0xDD, 0xEE};
+    const std::vector<std::uint8_t> testData = { 0xAA, 0xBB, 0xCC, 0xDD, 0xEE };
     assert(ring.writeExact(testData.data(), testData.size()));
     assert(ring.availableRead() == 5);
     assert(ring.availableWrite() == 1019);
@@ -47,7 +47,7 @@ static void testWrapAround()
     CircularByteRing<16> ring; // Small ring to test wrapping quickly
 
     // Write 12 bytes
-    std::vector<std::uint8_t> chunk1 = {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12};
+    std::vector<std::uint8_t> chunk1 = { 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12 };
     assert(ring.writeExact(chunk1.data(), chunk1.size()));
 
     // Read 8 bytes (advancing head to index 8)
@@ -56,7 +56,7 @@ static void testWrapAround()
     assert(ring.availableRead() == 4);
 
     // Now write 10 bytes -> will wrap around index 16
-    std::vector<std::uint8_t> chunk2 = {13, 14, 15, 16, 17, 18, 19, 20, 21, 22};
+    std::vector<std::uint8_t> chunk2 = { 13, 14, 15, 16, 17, 18, 19, 20, 21, 22 };
     assert(ring.writeExact(chunk2.data(), chunk2.size()));
     assert(ring.availableRead() == 14);
 
@@ -88,7 +88,7 @@ static void testFindByte()
     ring.advanceRead(24);
 
     // Write bytes wrapping around: 0x01, 0x02, 0xFF (delimiter!), 0x03
-    std::vector<std::uint8_t> data = {0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0xFF, 0x09, 0x0A};
+    std::vector<std::uint8_t> data = { 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0xFF, 0x09, 0x0A };
     assert(ring.writeExact(data.data(), data.size()));
 
     // Find 0xFF

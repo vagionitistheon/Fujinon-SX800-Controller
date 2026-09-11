@@ -40,8 +40,7 @@ public:
     [[nodiscard]] std::vector<std::uint8_t> buildSetZoomPosition(std::uint16_t pulse) const;
     [[nodiscard]] std::vector<std::uint8_t> buildQueryZoomPosition() const;
     [[nodiscard]] std::vector<std::uint8_t> buildSetBaudRate(BaudRate rate) const;
-    [[nodiscard]] std::vector<std::uint8_t> buildSetRtcTime(
-        std::uint8_t year, std::uint8_t month, std::uint8_t day,
+    [[nodiscard]] std::vector<std::uint8_t> buildSetRtcTime(std::uint8_t year, std::uint8_t month, std::uint8_t day,
         std::uint8_t hour, std::uint8_t minute, std::uint8_t second) const;
 
     // -------------------------------------------------------------------------
