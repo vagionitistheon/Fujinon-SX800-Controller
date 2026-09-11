@@ -1,0 +1,9 @@
+{
+  "name": "fujinon-sx800-controller",
+  "version-string": "2.12.0",
+  "builtin-baseline": "4eb0f7cabb9ca18132d80009312411b9261bba7b",
+  "description": "Fujinon SX800 / SX801 long-range multi-sensor surveillance camera controller library and applications.",
+  "dependencies": [
+    "glog"
+  ]
+}

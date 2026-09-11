@@ -61,6 +61,8 @@ Cross-platform C++17 controller and Qt 6 GUI application for the **Fujinon SX800
 
 - **Compiler**: C++17 compliant compiler (GCC 9+, Clang 10+, or MSVC 2019+).
 - **Build System**: CMake 3.16+.
+- **Package Manager (Windows)**: [vcpkg](https://github.com/microsoft/vcpkg) using manifest mode (`vcpkg.json`) to manage `glog`.
+- **Dependencies (Linux)**: `libgoogle-glog-dev`.
 - **GUI & Qt Adapter**: Qt 6.2+ (`Core`, `Gui`, `Widgets`, `Test`).
   - *Note: `FujinonSX800Core` has zero Qt dependency and can be compiled independently.*
 
@@ -87,7 +89,12 @@ cmake --build build -j$(nproc)
 ### Windows (MSVC)
 
 ```cmd
-cmake -B build -S . -DCMAKE_PREFIX_PATH=C:\Qt\6.x.x\msvc2019_64
+# Configure build with vcpkg manifest mode and Qt 6
+cmake -B build -S . ^
+  -DCMAKE_TOOLCHAIN_FILE=C:\vcpkg\scripts\buildsystems\vcpkg.cmake ^
+  -DCMAKE_PREFIX_PATH=C:\Qt\6.6.1\msvc2019_64
+
+# Build all targets (Release)
 cmake --build build --config Release
 ```
 

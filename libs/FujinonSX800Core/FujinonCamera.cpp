@@ -236,7 +236,10 @@ void FujinonCamera::workerLoop()
             }
 
             VLOG(1) << "Sending command (" << item.frame.size() << " bytes, tag: '" << item.queryTag << "')";
-            m_transport->sendData(item.frame);
+            const bool sendSuccess = m_transport->sendData(item.frame);
+            if (!sendSuccess) {
+                LOG(WARNING) << "Failed to transmit frame across transport.";
+            }
 
             // Notify TX callbacks
             std::vector<TrafficCallback> tbs;
