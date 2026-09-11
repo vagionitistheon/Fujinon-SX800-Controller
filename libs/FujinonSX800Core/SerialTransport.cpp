@@ -20,6 +20,7 @@
 #include <unistd.h>
 #endif
 
+#include <array>
 #include <chrono>
 #include <glog/logging.h>
 
@@ -340,7 +341,7 @@ void SerialTransport::setStateCallback(StateChangedCallback callback)
 
 void SerialTransport::readWorker()
 {
-    std::vector<std::uint8_t> buffer(512U, 0x00U);
+    std::array<std::uint8_t, 1024> buffer {};
 
 #ifdef _WIN32
     while (m_running.load()) {
@@ -350,14 +351,9 @@ void SerialTransport::readWorker()
 
         if (success) {
             if (bytesRead > 0) {
-                std::vector<std::uint8_t> chunk(buffer.begin(), buffer.begin() + bytesRead);
-                DataReceivedCallback cb;
-                {
-                    std::lock_guard<std::mutex> lock(m_callbackMutex);
-                    cb = m_dataCallback;
-                }
-                if (cb) {
-                    cb(chunk);
+                std::lock_guard<std::mutex> lock(m_callbackMutex);
+                if (m_dataCallback) {
+                    m_dataCallback(buffer.data(), static_cast<std::size_t>(bytesRead));
                 }
             } else {
                 std::this_thread::sleep_for(std::chrono::milliseconds(10));
@@ -381,15 +377,9 @@ void SerialTransport::readWorker()
         if (ret > 0 && (pfd.revents & POLLIN)) {
             const ssize_t bytesRead = ::read(m_handle, buffer.data(), buffer.size());
             if (bytesRead > 0) {
-                std::vector<std::uint8_t> chunk(buffer.begin(), buffer.begin() + bytesRead);
-
-                DataReceivedCallback cb;
-                {
-                    std::lock_guard<std::mutex> lock(m_callbackMutex);
-                    cb = m_dataCallback;
-                }
-                if (cb) {
-                    cb(chunk);
+                std::lock_guard<std::mutex> lock(m_callbackMutex);
+                if (m_dataCallback) {
+                    m_dataCallback(buffer.data(), static_cast<std::size_t>(bytesRead));
                 }
             } else if (bytesRead < 0 && (errno != EAGAIN && errno != EWOULDBLOCK)) {
                 notifyState(TransportState::Error, "Serial read error");

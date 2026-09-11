@@ -25,7 +25,7 @@ bool FujinonCamera::start()
         return false;
     }
 
-    m_transport->setDataCallback([this](const std::vector<std::uint8_t>& data) { onDataReceived(data); });
+    m_transport->setDataCallback([this](const std::uint8_t* data, std::size_t size) { onDataReceived(data, size); });
 
     if (!m_transport->isOpen()) {
         if (!m_transport->open()) {
@@ -287,11 +287,11 @@ void FujinonCamera::pollingLoop()
     }
 }
 
-void FujinonCamera::onDataReceived(const std::vector<std::uint8_t>& data)
+void FujinonCamera::onDataReceived(const std::uint8_t* data, std::size_t size)
 {
-    if (!data.empty()) {
-        VLOG(2) << "Writing " << data.size() << " bytes to RX ring buffer";
-        m_rxRing.writeExact(data.data(), data.size());
+    if (data != nullptr && size > 0U) {
+        VLOG(2) << "Writing " << size << " bytes to RX ring buffer";
+        m_rxRing.writeExact(data, size);
         m_rxCv.notify_one();
     }
 }

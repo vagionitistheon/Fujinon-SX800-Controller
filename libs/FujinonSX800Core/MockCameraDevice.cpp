@@ -237,13 +237,9 @@ void MockCameraDevice::processIncomingFrame(const std::vector<std::uint8_t>& fra
     }
 
     if (!response.empty()) {
-        DataReceivedCallback cb;
-        {
-            std::lock_guard<std::mutex> lock(m_callbackMutex);
-            cb = m_dataCallback;
-        }
-        if (cb) {
-            cb(response);
+        std::lock_guard<std::mutex> lock(m_callbackMutex);
+        if (m_dataCallback) {
+            m_dataCallback(response.data(), response.size());
         }
     }
 }

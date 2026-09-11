@@ -34,6 +34,7 @@
 #define IS_WOULDBLOCK() (errno == EAGAIN || errno == EWOULDBLOCK)
 #endif
 
+#include <array>
 #include <chrono>
 #include <glog/logging.h>
 
@@ -356,7 +357,7 @@ void TcpTransport::setStateCallback(StateChangedCallback callback)
 
 void TcpTransport::readWorker()
 {
-    std::vector<std::uint8_t> buffer(1024U, 0x00U);
+    std::array<std::uint8_t, 2048> buffer {};
 
     while (m_running.load()) {
 #ifdef _WIN32
@@ -381,15 +382,9 @@ void TcpTransport::readWorker()
             );
 
             if (bytesRead > 0) {
-                std::vector<std::uint8_t> chunk(buffer.begin(), buffer.begin() + bytesRead);
-
-                DataReceivedCallback cb;
-                {
-                    std::lock_guard<std::mutex> lock(m_callbackMutex);
-                    cb = m_dataCallback;
-                }
-                if (cb) {
-                    cb(chunk);
+                std::lock_guard<std::mutex> lock(m_callbackMutex);
+                if (m_dataCallback) {
+                    m_dataCallback(buffer.data(), static_cast<std::size_t>(bytesRead));
                 }
             } else if (bytesRead == 0) {
                 notifyState(TransportState::Disconnected, "Remote host closed connection");

@@ -130,7 +130,7 @@ private:
     void workerLoop();
     void pollingLoop();
     void rxLoop();
-    void onDataReceived(const std::vector<std::uint8_t>& data);
+    void onDataReceived(const std::uint8_t* data, std::size_t size);
     void dispatchFrame(const std::vector<std::uint8_t>& frame);
     void checkQueryTimeout();
 

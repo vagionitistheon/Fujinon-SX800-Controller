@@ -3,6 +3,7 @@
 /// @file ITransport.h
 /// @brief Abstract transport layer interface for Pelco-D communications (zero Qt dependency).
 
+#include <cstddef>
 #include <cstdint>
 #include <functional>
 #include <string>
@@ -18,7 +19,7 @@ enum class TransportState : std::uint8_t { Disconnected = 0x00U, Connecting = 0x
 /// @brief Pure virtual interface defining raw byte streaming and lifecycle.
 class ITransport {
 public:
-    using DataReceivedCallback = std::function<void(const std::vector<std::uint8_t>& data)>;
+    using DataReceivedCallback = std::function<void(const std::uint8_t* data, std::size_t size)>;
     using StateChangedCallback = std::function<void(TransportState state, const std::string& errorMsg)>;
 
     virtual ~ITransport() = default;
