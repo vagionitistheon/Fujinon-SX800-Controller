@@ -123,6 +123,7 @@ public:
     void sendQueryFrame(const std::vector<std::uint8_t>& frame, std::string queryTag = "CustomQuery");
     void queryAll();
     void queryTemperature();
+    void queryManualIris();
     void setTermination(bool enable);
     void reboot();
     void factoryReset();

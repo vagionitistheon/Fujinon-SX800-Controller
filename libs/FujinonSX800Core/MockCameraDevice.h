@@ -20,6 +20,7 @@ struct MockInternalState {
     std::uint16_t zoomPosition { 1000U };
     std::uint16_t focusPosition { 2000U };
     std::uint16_t irisPosition { 500U };
+    ManualIrisFNo manualIrisFNo { ManualIrisFNo::F4_0 };
     DefogMode defogMode { DefogMode::Off };
     DeHeatHazeMode deHeatHazeMode { DeHeatHazeMode::Off };
     VlcFilterMode vlcFilterMode { VlcFilterMode::Off };

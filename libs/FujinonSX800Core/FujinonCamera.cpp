@@ -744,11 +744,17 @@ void FujinonCamera::queryAll()
     enqueueCommand(m_builder.buildQueryDayNightEx(), "QueryDayNightEx");
     enqueueCommand(m_builder.buildQuerySpeedEx(), "QuerySpeedEx");
     enqueueCommand(m_builder.buildQueryTemperature(), "QueryTemperature");
+    enqueueCommand(m_builder.buildQueryManualIris(), "QueryManualIris");
 }
 
 void FujinonCamera::queryTemperature()
 {
     enqueueCommand(m_builder.buildQueryTemperature(), "QueryTemperature");
+}
+
+void FujinonCamera::queryManualIris()
+{
+    enqueueCommand(m_builder.buildQueryManualIris(), "QueryManualIris");
 }
 
 } // namespace FujinonSX800

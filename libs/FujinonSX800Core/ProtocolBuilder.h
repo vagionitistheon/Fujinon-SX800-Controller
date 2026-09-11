@@ -69,6 +69,7 @@ public:
     [[nodiscard]] std::vector<std::uint8_t> buildQueryShutterSpeed() const;
     [[nodiscard]] std::vector<std::uint8_t> buildSetIso(IsoSensitivity iso) const;
     [[nodiscard]] std::vector<std::uint8_t> buildQueryIso() const;
+    [[nodiscard]] std::vector<std::uint8_t> buildQueryManualIris() const;
     [[nodiscard]] std::vector<std::uint8_t> buildQueryIrisPosition() const;
     [[nodiscard]] std::vector<std::uint8_t> buildQueryManualSettings(std::uint8_t target = 0x25U) const;
 

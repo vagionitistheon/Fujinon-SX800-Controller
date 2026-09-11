@@ -351,10 +351,19 @@ void OpticsTab::setupConnections()
         cmbManualIrisFNo->setEnabled(!checked);
         cam->setAutoIris(checked);
     });
-    connect(sliderIris, &QSlider::sliderReleased, this, [this]() { cam->setManualIris(sliderIris->value()); });
-    connect(cmbManualIrisFNo, QOverload<int>::of(&QComboBox::currentIndexChanged), this, [this]() {
-        const auto fNo = static_cast<FujinonSX800::ManualIrisFNo>(cmbManualIrisFNo->currentData().toInt());
+    connect(sliderIris, &QSlider::sliderReleased, this, [this]() {
+        const auto fNo = FujinonSX800::positionToManualIrisFNo(static_cast<std::uint16_t>(sliderIris->value()));
         cam->setManualIrisFNo(fNo);
+        const int idx = cmbManualIrisFNo->findData(static_cast<int>(fNo));
+        if (idx >= 0) {
+            cmbManualIrisFNo->setCurrentIndex(idx);
+        }
+    });
+    connect(cmbManualIrisFNo, QOverload<int>::of(&QComboBox::currentIndexChanged), this, [this]() {
+        if (!isUpdatingFromTelemetry) {
+            const auto fNo = static_cast<FujinonSX800::ManualIrisFNo>(cmbManualIrisFNo->currentData().toInt());
+            cam->setManualIrisFNo(fNo);
+        }
     });
     connect(cmbShutterLimit, QOverload<int>::of(&QComboBox::currentIndexChanged), this, [this]() {
         const auto limit = static_cast<FujinonSX800::ShutterLimitMode>(cmbShutterLimit->currentData().toInt());
@@ -386,6 +395,12 @@ void OpticsTab::updateTelemetry(const FujinonSX800::CameraStatus& status)
 
     chkAutoFocus->setChecked(status.autoFocusMode == FujinonSX800::AutoFocusMode::On);
     chkAutoIris->setChecked(status.autoIrisMode == FujinonSX800::AutoIrisMode::On);
+    if (!sliderIris->isSliderDown()) {
+        const int idx = cmbManualIrisFNo->findData(static_cast<int>(status.manualIrisFNo));
+        if (idx >= 0) {
+            cmbManualIrisFNo->setCurrentIndex(idx);
+        }
+    }
     chkAgc->setChecked(status.agcMode == FujinonSX800::AgcMode::Auto);
     chkBlc->setChecked(status.blcMode == FujinonSX800::BlcMode::On);
 

@@ -171,6 +171,27 @@ enum class ManualIrisFNo : std::uint8_t {
     Close = 0x12U
 };
 
+/// @brief Converts a 16-bit position value or 1-based enum code to a valid ManualIrisFNo.
+/// @details If @p pos is in range [1, 18], it is treated directly as the ManualIrisFNo wire value.
+///          If @p pos is 0, it maps to wide open (ManualIrisFNo::F4_0).
+///          If @p pos > 18 (e.g. 0..1023 or 0..0x4000), it is mapped proportionally across
+///          the 18 discrete aperture stops [ManualIrisFNo::F4_0, ManualIrisFNo::Close].
+/// @param pos Continuous slider position or discrete wire value.
+/// @return Valid ManualIrisFNo enum value (guaranteed in range 0x01 .. 0x12).
+[[nodiscard]] constexpr ManualIrisFNo positionToManualIrisFNo(std::uint16_t pos) noexcept
+{
+    if (pos == 0U) {
+        return ManualIrisFNo::F4_0;
+    }
+    if (pos <= 0x12U) {
+        return static_cast<ManualIrisFNo>(pos);
+    }
+    const std::uint32_t maxRange = (pos <= 1023U) ? 1023U : 0x4000U;
+    const auto clamped = (pos > maxRange) ? maxRange : pos;
+    const auto index = (static_cast<std::uint32_t>(clamped) * 17U + (maxRange / 2U)) / maxRange;
+    return static_cast<ManualIrisFNo>(1U + index);
+}
+
 /// @enum ShutterLimitMode
 /// @brief Shutter lowest limit on auto exposure (Section 5.3.10).
 enum class ShutterLimitMode : std::uint8_t {

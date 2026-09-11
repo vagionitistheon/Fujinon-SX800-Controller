@@ -66,8 +66,10 @@ void testCorrectedSpecOpcodes()
     SX800_TEST_ASSERT(qIso[2] == 0x00U && qIso[3] == 0x9BU);
 
     // 5.3.15 Query Manual Iris: CMND2 must be 0x9D (spec Section 5.3.15)
-    const auto qIris = builder.buildQueryIrisPosition();
+    const auto qIris = builder.buildQueryManualIris();
     SX800_TEST_ASSERT(qIris[2] == 0x00U && qIris[3] == 0x9DU);
+    const auto qIrisPos = builder.buildQueryIrisPosition();
+    SX800_TEST_ASSERT(qIrisPos == qIris);
 
     // 5.3.23 Query Manual Settings: CMND2 must be 0xAD (spec Section 5.3.23)
     const auto qManual = builder.buildQueryManualSettings();
@@ -244,11 +246,65 @@ void testRtcClockCommands()
     SX800_TEST_ASSERT(multi2 == multi);
 }
 
+void testManualIrisCommands()
+{
+    using FujinonSX800::ManualIrisFNo;
+    using FujinonSX800::PelcoDFrame;
+    using FujinonSX800::positionToManualIrisFNo;
+
+    FujinonSX800::ProtocolBuilder builder(0x07U);
+
+    // 1. Set Manual Iris (spec Section 5.3.9): CMND2=0x91, DATA1=0x00, DATA2=fNo
+    const auto f5_6 = builder.buildSetManualIris(ManualIrisFNo::F5_6);
+    SX800_TEST_ASSERT(f5_6.size() == 7U);
+    SX800_TEST_ASSERT(PelcoDFrame::isValidFrame(f5_6));
+    SX800_TEST_ASSERT(f5_6[1] == 0x07U && f5_6[2] == 0x00U && f5_6[3] == 0x91U);
+    SX800_TEST_ASSERT(f5_6[4] == 0x00U && f5_6[5] == 0x04U);
+
+    // 2. Query Manual Iris (spec Section 5.3.15): CMND2=0x9D, DATA1=0x00, DATA2=0x00
+    const auto qIris = builder.buildQueryManualIris();
+    SX800_TEST_ASSERT(qIris.size() == 7U);
+    SX800_TEST_ASSERT(PelcoDFrame::isValidFrame(qIris));
+    SX800_TEST_ASSERT(qIris[1] == 0x07U && qIris[2] == 0x00U && qIris[3] == 0x9DU);
+    SX800_TEST_ASSERT(qIris[4] == 0x00U && qIris[5] == 0x00U);
+
+    // 3. buildSetIrisPosition: ensures no truncation of 16-bit positions > 0xFF
+    const auto p512 = builder.buildSetIrisPosition(512U);
+    SX800_TEST_ASSERT(p512.size() == 7U);
+    SX800_TEST_ASSERT(PelcoDFrame::isValidFrame(p512));
+    SX800_TEST_ASSERT(p512[2] == 0x00U && p512[3] == 0x91U);
+    SX800_TEST_ASSERT(p512[4] == 0x00U && p512[5] != 0x00U); // must NOT be corrupted to 0x00
+    SX800_TEST_ASSERT(p512[5] >= 0x01U && p512[5] <= 0x12U);
+
+    const auto p2000 = builder.buildSetIrisPosition(0x2000U);
+    SX800_TEST_ASSERT(p2000.size() == 7U);
+    SX800_TEST_ASSERT(PelcoDFrame::isValidFrame(p2000));
+    SX800_TEST_ASSERT(p2000[2] == 0x00U && p2000[3] == 0x91U);
+    SX800_TEST_ASSERT(p2000[4] == 0x00U && p2000[5] != 0x00U); // must NOT be corrupted to 0x00
+    SX800_TEST_ASSERT(p2000[5] >= 0x01U && p2000[5] <= 0x12U);
+
+    const auto pClose = builder.buildSetIrisPosition(1023U);
+    SX800_TEST_ASSERT(pClose[5] == static_cast<std::uint8_t>(ManualIrisFNo::Close));
+
+    const auto pZero = builder.buildSetIrisPosition(0U);
+    SX800_TEST_ASSERT(pZero[5] == static_cast<std::uint8_t>(ManualIrisFNo::F4_0));
+
+    // 4. positionToManualIrisFNo helper assertions
+    SX800_TEST_ASSERT(positionToManualIrisFNo(0U) == ManualIrisFNo::F4_0);
+    SX800_TEST_ASSERT(positionToManualIrisFNo(1U) == ManualIrisFNo::F4_0);
+    SX800_TEST_ASSERT(positionToManualIrisFNo(18U) == ManualIrisFNo::Close);
+    SX800_TEST_ASSERT(positionToManualIrisFNo(512U) == ManualIrisFNo::F11);
+    SX800_TEST_ASSERT(positionToManualIrisFNo(0x2000U) == ManualIrisFNo::F11);
+    SX800_TEST_ASSERT(positionToManualIrisFNo(0x4000U) == ManualIrisFNo::Close);
+    SX800_TEST_ASSERT(positionToManualIrisFNo(65535U) == ManualIrisFNo::Close);
+}
+
 int main()
 {
     testStandardCommands();
     testCorrectedSpecOpcodes();
     testRtcClockCommands();
+    testManualIrisCommands();
 
     std::cout << "[PASS] TestProtocolBuilder completed successfully." << std::endl;
     return 0;

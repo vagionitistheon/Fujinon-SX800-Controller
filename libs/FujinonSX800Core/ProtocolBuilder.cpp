@@ -223,7 +223,7 @@ std::vector<std::uint8_t> ProtocolBuilder::buildSetManualIris(ManualIrisFNo fNo)
 
 std::vector<std::uint8_t> ProtocolBuilder::buildSetIrisPosition(std::uint16_t pos) const
 {
-    const auto fNo = static_cast<ManualIrisFNo>(pos & 0xFFU);
+    const auto fNo = positionToManualIrisFNo(pos);
     return buildSetManualIris(fNo);
 }
 
@@ -252,9 +252,14 @@ std::vector<std::uint8_t> ProtocolBuilder::buildQueryIso() const
     return PelcoDFrame::createFrame(m_address, 0x00U, 0x9BU, 0x00U, 0x00U);
 }
 
-std::vector<std::uint8_t> ProtocolBuilder::buildQueryIrisPosition() const
+std::vector<std::uint8_t> ProtocolBuilder::buildQueryManualIris() const
 {
     return PelcoDFrame::createFrame(m_address, 0x00U, 0x9DU, 0x00U, 0x00U);
+}
+
+std::vector<std::uint8_t> ProtocolBuilder::buildQueryIrisPosition() const
+{
+    return buildQueryManualIris();
 }
 
 std::vector<std::uint8_t> ProtocolBuilder::buildQueryManualSettings(std::uint8_t target) const

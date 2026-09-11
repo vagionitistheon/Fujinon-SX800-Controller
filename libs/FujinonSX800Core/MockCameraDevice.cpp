@@ -206,6 +206,22 @@ void MockCameraDevice::processIncomingFrame(const std::vector<std::uint8_t>& fra
         }
         response = { PelcoDFrame::SyncByte, m_address, 0x00U, 0x00U };
         response[3] = PelcoDFrame::calculateChecksum(&response[1], 2U);
+    } else if (cmd1 == 0x00U && cmd2 == 0x91U) {
+        // Set Manual Iris
+        {
+            std::lock_guard<std::mutex> lock(m_stateMutex);
+            m_state.manualIrisFNo = static_cast<ManualIrisFNo>(d2);
+        }
+        response = { PelcoDFrame::SyncByte, m_address, 0x00U, 0x00U };
+        response[3] = PelcoDFrame::calculateChecksum(&response[1], 2U);
+    } else if (cmd1 == 0x00U && cmd2 == 0x9DU) {
+        // Query Manual Iris
+        ManualIrisFNo fNo { ManualIrisFNo::F4_0 };
+        {
+            std::lock_guard<std::mutex> lock(m_stateMutex);
+            fNo = m_state.manualIrisFNo;
+        }
+        response = PelcoDFrame::createFrame(m_address, 0x00U, 0x9DU, static_cast<std::uint8_t>(fNo), 0x00U);
     } else if (cmd1 == 0xF0U && cmd2 == 0x29U) {
         // Set Defog
         {

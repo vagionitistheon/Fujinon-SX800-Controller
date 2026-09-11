@@ -204,8 +204,8 @@ void TuiApp::handleInput(const KeyEvent& ev)
         m_camera->setOpticalStabilization(next);
         m_statusMsg = "Command: Toggled OIS Stabilizer";
     } else if (ev.isChar('i') || ev.isChar('I')) {
-        m_camera->setIrisPosition(0x2000U);
-        m_statusMsg = "Command: Set Nominal Iris Position";
+        m_camera->setManualIris(FujinonSX800::ManualIrisFNo::F5_6);
+        m_statusMsg = "Command: Set Manual Iris (F5.6)";
     } else if (ev.isChar('r') || ev.isChar('R')) {
         m_camera->queryAll();
         m_statusMsg = "Command: Queried Complete Camera Telemetry";
