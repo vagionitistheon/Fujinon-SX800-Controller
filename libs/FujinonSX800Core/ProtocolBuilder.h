@@ -40,8 +40,18 @@ public:
     [[nodiscard]] std::vector<std::uint8_t> buildSetZoomPosition(std::uint16_t pulse) const;
     [[nodiscard]] std::vector<std::uint8_t> buildQueryZoomPosition() const;
     [[nodiscard]] std::vector<std::uint8_t> buildSetBaudRate(BaudRate rate) const;
+    [[nodiscard]] std::vector<std::uint8_t> buildSetClockYear(std::uint16_t year) const;
+    [[nodiscard]] std::vector<std::uint8_t> buildSetClockDate(std::uint8_t month, std::uint8_t day) const;
+    [[nodiscard]] std::vector<std::uint8_t> buildSetClockTime(std::uint8_t hour, std::uint8_t minute) const;
+    [[nodiscard]] std::vector<std::uint8_t> buildSetClockSecond(std::uint8_t second) const;
+    [[nodiscard]] std::vector<std::uint8_t> buildSetRtcTime(std::uint16_t year, std::uint8_t month, std::uint8_t day,
+        std::uint8_t hour, std::uint8_t minute, std::uint8_t second) const;
     [[nodiscard]] std::vector<std::uint8_t> buildSetRtcTime(std::uint8_t year, std::uint8_t month, std::uint8_t day,
         std::uint8_t hour, std::uint8_t minute, std::uint8_t second) const;
+    [[nodiscard]] std::vector<std::uint8_t> buildQueryClockYear() const;
+    [[nodiscard]] std::vector<std::uint8_t> buildQueryClockDate() const;
+    [[nodiscard]] std::vector<std::uint8_t> buildQueryClockTime() const;
+    [[nodiscard]] std::vector<std::uint8_t> buildQueryClockSecond() const;
 
     // -------------------------------------------------------------------------
     // 5.3 FF Extended Commands

@@ -668,10 +668,20 @@ void FujinonCamera::setOsdIdPosition(OsdPosition pos)
     enqueueCommand(m_builder.buildSetIdPosition(pos));
 }
 
+void FujinonCamera::setRtcTime(std::uint16_t year, std::uint8_t month, std::uint8_t day, std::uint8_t hour,
+    std::uint8_t minute, std::uint8_t second)
+{
+    enqueueCommand(m_builder.buildSetClockYear(year));
+    enqueueCommand(m_builder.buildSetClockDate(month, day));
+    enqueueCommand(m_builder.buildSetClockTime(hour, minute));
+    enqueueCommand(m_builder.buildSetClockSecond(second));
+}
+
 void FujinonCamera::setRtcTime(std::uint8_t year, std::uint8_t month, std::uint8_t day, std::uint8_t hour,
     std::uint8_t minute, std::uint8_t second)
 {
-    enqueueCommand(m_builder.buildSetRtcTime(year, month, day, hour, minute, second));
+    const auto fullYear = static_cast<std::uint16_t>((year < 100U) ? (2000U + year) : year);
+    setRtcTime(fullYear, month, day, hour, minute, second);
 }
 
 void FujinonCamera::setSdPlayback(SdPlaybackControl ctrl)

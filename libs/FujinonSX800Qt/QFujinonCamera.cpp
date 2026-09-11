@@ -640,7 +640,7 @@ void QFujinonCamera::setRtcTime(const QDateTime& dt)
     if (m_camera && dt.isValid()) {
         const auto date = dt.date();
         const auto time = dt.time();
-        const auto year = static_cast<std::uint8_t>(date.year() % 100);
+        const auto year = static_cast<std::uint16_t>(date.year());
         const auto month = static_cast<std::uint8_t>(date.month());
         const auto day = static_cast<std::uint8_t>(date.day());
         const auto hour = static_cast<std::uint8_t>(time.hour());

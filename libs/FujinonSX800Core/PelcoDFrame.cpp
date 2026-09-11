@@ -34,8 +34,7 @@ std::vector<std::uint8_t> PelcoDFrame::createFrame(
 
 bool PelcoDFrame::isValidOpcode(std::uint8_t cmd1) noexcept
 {
-    return cmd1 == 0x00U || cmd1 == 0x01U || cmd1 == 0x02U || cmd1 == 0x04U || cmd1 == 0x08U || cmd1 == 0x10U
-        || cmd1 == 0xF0U || cmd1 == 0xF1U;
+    return cmd1 <= 0x07U || cmd1 == 0x08U || cmd1 == 0x10U || cmd1 == 0xF0U || cmd1 == 0xF1U;
 }
 
 bool PelcoDFrame::isValidFrame(const std::vector<std::uint8_t>& frame) noexcept

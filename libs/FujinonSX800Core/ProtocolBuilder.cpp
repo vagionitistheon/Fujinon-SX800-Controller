@@ -113,16 +113,72 @@ std::vector<std::uint8_t> ProtocolBuilder::buildSetBaudRate(BaudRate rate) const
     return PelcoDFrame::createFrame(m_address, 0x00U, 0x67U, 0x00U, static_cast<std::uint8_t>(rate));
 }
 
+std::vector<std::uint8_t> ProtocolBuilder::buildSetClockYear(std::uint16_t year) const
+{
+    const auto hi = static_cast<std::uint8_t>((year >> 8U) & 0xFFU);
+    const auto lo = static_cast<std::uint8_t>(year & 0xFFU);
+    return PelcoDFrame::createFrame(m_address, 0x06U, 0x77U, hi, lo);
+}
+
+std::vector<std::uint8_t> ProtocolBuilder::buildSetClockDate(std::uint8_t month, std::uint8_t day) const
+{
+    return PelcoDFrame::createFrame(m_address, 0x04U, 0x77U, month, day);
+}
+
+std::vector<std::uint8_t> ProtocolBuilder::buildSetClockTime(std::uint8_t hour, std::uint8_t minute) const
+{
+    return PelcoDFrame::createFrame(m_address, 0x02U, 0x77U, hour, minute);
+}
+
+std::vector<std::uint8_t> ProtocolBuilder::buildSetClockSecond(std::uint8_t second) const
+{
+    return PelcoDFrame::createFrame(m_address, 0x00U, 0x77U, 0x00U, second);
+}
+
+std::vector<std::uint8_t> ProtocolBuilder::buildSetRtcTime(std::uint16_t year, std::uint8_t month, std::uint8_t day,
+    std::uint8_t hour, std::uint8_t minute, std::uint8_t second) const
+{
+    std::vector<std::uint8_t> frames;
+    frames.reserve(PelcoDFrame::StandardFrameSize * 4U);
+
+    const auto fYear = buildSetClockYear(year);
+    const auto fDate = buildSetClockDate(month, day);
+    const auto fTime = buildSetClockTime(hour, minute);
+    const auto fSec = buildSetClockSecond(second);
+
+    frames.insert(frames.end(), fYear.begin(), fYear.end());
+    frames.insert(frames.end(), fDate.begin(), fDate.end());
+    frames.insert(frames.end(), fTime.begin(), fTime.end());
+    frames.insert(frames.end(), fSec.begin(), fSec.end());
+
+    return frames;
+}
+
 std::vector<std::uint8_t> ProtocolBuilder::buildSetRtcTime(std::uint8_t year, std::uint8_t month, std::uint8_t day,
     std::uint8_t hour, std::uint8_t minute, std::uint8_t second) const
 {
-    (void)year;
-    (void)month;
-    (void)day;
-    (void)hour;
-    (void)minute;
-    (void)second;
-    return PelcoDFrame::createFrame(m_address, 0x00U, 0x77U, 0x00U, 0x00U);
+    const auto fullYear = static_cast<std::uint16_t>((year < 100U) ? (2000U + year) : year);
+    return buildSetRtcTime(fullYear, month, day, hour, minute, second);
+}
+
+std::vector<std::uint8_t> ProtocolBuilder::buildQueryClockYear() const
+{
+    return PelcoDFrame::createFrame(m_address, 0x07U, 0x77U, 0x00U, 0x00U);
+}
+
+std::vector<std::uint8_t> ProtocolBuilder::buildQueryClockDate() const
+{
+    return PelcoDFrame::createFrame(m_address, 0x05U, 0x77U, 0x00U, 0x00U);
+}
+
+std::vector<std::uint8_t> ProtocolBuilder::buildQueryClockTime() const
+{
+    return PelcoDFrame::createFrame(m_address, 0x03U, 0x77U, 0x00U, 0x00U);
+}
+
+std::vector<std::uint8_t> ProtocolBuilder::buildQueryClockSecond() const
+{
+    return PelcoDFrame::createFrame(m_address, 0x01U, 0x77U, 0x00U, 0x00U);
 }
 
 // -----------------------------------------------------------------------------

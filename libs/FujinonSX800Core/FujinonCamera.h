@@ -106,6 +106,8 @@ public:
     void setOsdDatePosition(OsdPosition pos);
     void setOsdTitlePosition(OsdPosition pos);
     void setOsdIdPosition(OsdPosition pos);
+    void setRtcTime(std::uint16_t year, std::uint8_t month, std::uint8_t day, std::uint8_t hour, std::uint8_t minute,
+        std::uint8_t second);
     void setRtcTime(std::uint8_t year, std::uint8_t month, std::uint8_t day, std::uint8_t hour, std::uint8_t minute,
         std::uint8_t second);
     void setSdPlayback(SdPlaybackControl ctrl);

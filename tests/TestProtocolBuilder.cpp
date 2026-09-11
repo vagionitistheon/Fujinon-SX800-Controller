@@ -1,6 +1,7 @@
 /// @file TestProtocolBuilder.cpp
 /// @brief Unit tests verifying wire packet construction across all command categories.
 
+#include "FujinonSX800Core/PelcoDFrame.h"
 #include "FujinonSX800Core/ProtocolBuilder.h"
 #include "TestHelper.h"
 
@@ -183,10 +184,71 @@ void testCorrectedSpecOpcodes()
     SX800_TEST_ASSERT(qSpdEx[2] == 0xF1U && qSpdEx[3] == 0x2DU);
 }
 
+void testRtcClockCommands()
+{
+    FujinonSX800::ProtocolBuilder builder(0x07U);
+
+    // 1. Set Clock Year (0x06, 0x77): year 2026 -> 0x07EA
+    const auto yr = builder.buildSetClockYear(2026U);
+    SX800_TEST_ASSERT(yr.size() == 7U);
+    SX800_TEST_ASSERT(FujinonSX800::PelcoDFrame::isValidFrame(yr));
+    SX800_TEST_ASSERT(yr[1] == 0x07U && yr[2] == 0x06U && yr[3] == 0x77U && yr[4] == 0x07U && yr[5] == 0xEAU);
+
+    // 2. Set Clock Date (0x04, 0x77): September (9), 11
+    const auto dt = builder.buildSetClockDate(9U, 11U);
+    SX800_TEST_ASSERT(dt.size() == 7U);
+    SX800_TEST_ASSERT(FujinonSX800::PelcoDFrame::isValidFrame(dt));
+    SX800_TEST_ASSERT(dt[1] == 0x07U && dt[2] == 0x04U && dt[3] == 0x77U && dt[4] == 0x09U && dt[5] == 0x0BU);
+
+    // 3. Set Clock Time (0x02, 0x77): 18:30
+    const auto tm = builder.buildSetClockTime(18U, 30U);
+    SX800_TEST_ASSERT(tm.size() == 7U);
+    SX800_TEST_ASSERT(FujinonSX800::PelcoDFrame::isValidFrame(tm));
+    SX800_TEST_ASSERT(tm[1] == 0x07U && tm[2] == 0x02U && tm[3] == 0x77U && tm[4] == 0x12U && tm[5] == 0x1EU);
+
+    // 4. Set Clock Second & Sync (0x00, 0x77): second 45
+    const auto sec = builder.buildSetClockSecond(45U);
+    SX800_TEST_ASSERT(sec.size() == 7U);
+    SX800_TEST_ASSERT(FujinonSX800::PelcoDFrame::isValidFrame(sec));
+    SX800_TEST_ASSERT(sec[1] == 0x07U && sec[2] == 0x00U && sec[3] == 0x77U && sec[4] == 0x00U && sec[5] == 0x2DU);
+
+    // 5. Query Clock Commands
+    const auto qYr = builder.buildQueryClockYear();
+    SX800_TEST_ASSERT(qYr.size() == 7U && FujinonSX800::PelcoDFrame::isValidFrame(qYr));
+    SX800_TEST_ASSERT(qYr[2] == 0x07U && qYr[3] == 0x77U && qYr[4] == 0x00U && qYr[5] == 0x00U);
+
+    const auto qDt = builder.buildQueryClockDate();
+    SX800_TEST_ASSERT(qDt.size() == 7U && FujinonSX800::PelcoDFrame::isValidFrame(qDt));
+    SX800_TEST_ASSERT(qDt[2] == 0x05U && qDt[3] == 0x77U && qDt[4] == 0x00U && qDt[5] == 0x00U);
+
+    const auto qTm = builder.buildQueryClockTime();
+    SX800_TEST_ASSERT(qTm.size() == 7U && FujinonSX800::PelcoDFrame::isValidFrame(qTm));
+    SX800_TEST_ASSERT(qTm[2] == 0x03U && qTm[3] == 0x77U && qTm[4] == 0x00U && qTm[5] == 0x00U);
+
+    const auto qSec = builder.buildQueryClockSecond();
+    SX800_TEST_ASSERT(qSec.size() == 7U && FujinonSX800::PelcoDFrame::isValidFrame(qSec));
+    SX800_TEST_ASSERT(qSec[2] == 0x01U && qSec[3] == 0x77U && qSec[4] == 0x00U && qSec[5] == 0x00U);
+
+    // 6. Multi-frame buildSetRtcTime (full 28 bytes)
+    const auto multi = builder.buildSetRtcTime(static_cast<std::uint16_t>(2026U), 9U, 11U, 18U, 30U, 45U);
+    SX800_TEST_ASSERT(multi.size() == 28U);
+    const auto frames = FujinonSX800::PelcoDFrame::splitStream(multi);
+    SX800_TEST_ASSERT(frames.size() == 4U);
+    SX800_TEST_ASSERT(frames[0] == yr);
+    SX800_TEST_ASSERT(frames[1] == dt);
+    SX800_TEST_ASSERT(frames[2] == tm);
+    SX800_TEST_ASSERT(frames[3] == sec);
+
+    // 7. Multi-frame buildSetRtcTime with 2-digit year
+    const auto multi2 = builder.buildSetRtcTime(static_cast<std::uint8_t>(26U), 9U, 11U, 18U, 30U, 45U);
+    SX800_TEST_ASSERT(multi2 == multi);
+}
+
 int main()
 {
     testStandardCommands();
     testCorrectedSpecOpcodes();
+    testRtcClockCommands();
 
     std::cout << "[PASS] TestProtocolBuilder completed successfully." << std::endl;
     return 0;
