@@ -201,10 +201,21 @@ bool ProtocolParser::parseExtendedResponse(const std::vector<std::uint8_t>& pack
             case 0x31U:
                 status.sharpness = d2;
                 break;
-            case 0x33U:
-                status.colorTempKelvin = static_cast<std::uint16_t>((d1 << 8U) | d2);
+            case 0x33U: { // Color temperature response (spec Section 5.5.10 / 5.5.15)
+                if (d2 == 0x01U) {
+                    status.colorTempKelvin = 3000U;
+                } else if (d2 == 0x02U) {
+                    status.colorTempKelvin = 5000U;
+                } else if (d2 == 0x03U) {
+                    status.colorTempKelvin = 9000U;
+                } else if (d2 >= 20U && d2 <= 100U) {
+                    status.colorTempKelvin = static_cast<std::uint16_t>(d2 * 100U);
+                } else {
+                    status.colorTempKelvin = 5000U;
+                }
                 status.colorTemperatureKelvin = status.colorTempKelvin;
                 break;
+            }
             case 0x35U:
                 status.whiteBalance = static_cast<WhiteBalanceMode>(d2);
                 status.whiteBalanceMode = status.whiteBalance;

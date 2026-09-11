@@ -103,6 +103,22 @@ void testExtendedQueryResponses()
     SX800_TEST_ASSERT(FujinonSX800::ProtocolParser::parsePacket(vlcResp, status));
     SX800_TEST_ASSERT(status.vlcFilter == FujinonSX800::VlcFilterMode::On);
 
+    // 0x3F Image quality query response: d1=0x33 (Color Temperature), d2=0x02 (5000K)
+    const auto cTemp5000 = FujinonSX800::PelcoDFrame::createFrame(0x07U, 0xF0U, 0x3FU, 0x33U, 0x02U);
+    SX800_TEST_ASSERT(FujinonSX800::ProtocolParser::parsePacket(cTemp5000, status));
+    SX800_TEST_ASSERT(status.colorTemperatureKelvin == 5000U);
+    SX800_TEST_ASSERT(status.colorTempKelvin == 5000U);
+
+    // 0x3F Image quality query response: d1=0x33 (Color Temperature), d2=0x01 (3000K)
+    const auto cTemp3000 = FujinonSX800::PelcoDFrame::createFrame(0x07U, 0xF0U, 0x3FU, 0x33U, 0x01U);
+    SX800_TEST_ASSERT(FujinonSX800::ProtocolParser::parsePacket(cTemp3000, status));
+    SX800_TEST_ASSERT(status.colorTemperatureKelvin == 3000U);
+
+    // 0x3F Image quality query response: d1=0x33 (Color Temperature), d2=0x03 (9000K)
+    const auto cTemp9000 = FujinonSX800::PelcoDFrame::createFrame(0x07U, 0xF0U, 0x3FU, 0x33U, 0x03U);
+    SX800_TEST_ASSERT(FujinonSX800::ProtocolParser::parsePacket(cTemp9000, status));
+    SX800_TEST_ASSERT(status.colorTemperatureKelvin == 9000U);
+
     // 0xAF Manual setting query response: d1=0x25 (Zoom speed), d2=8
     const auto spdResp = FujinonSX800::PelcoDFrame::createFrame(0x07U, 0x00U, 0xAFU, 0x25U, 8U);
     SX800_TEST_ASSERT(FujinonSX800::ProtocolParser::parsePacket(spdResp, status));
