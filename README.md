@@ -55,45 +55,6 @@ Cross-platform C++17 controller and Qt 6 GUI application for the **Fujinon SX800
 
 ---
 
-## Directory Structure
-
-```text
-Fujinon-SX800-Controller/
-├── .agents/                      # Architecture, compliance, and coding rules
-├── CMakeLists.txt                # Unified multi-target CMake build script
-├── docs/                         # Protocol specs and design documentation
-├── libs/
-│   ├── FujinonSX800Core/         # Pure C++17 core library (no Qt dependency)
-│   │   ├── CameraStatus.h        # Unified camera telemetry state struct
-│   │   ├── CircularByteRing.h    # SPSC lock-free circular byte stream ring
-│   │   ├── FujinonCamera.h/.cpp  # Asynchronous camera controller & command pacing
-│   │   ├── ITransport.h          # Abstract transport interface
-│   │   ├── MockCameraDevice.h/.cpp# In-memory virtual camera simulation
-│   │   ├── OpticalTables.h/.cpp  # Appendix 1 & 2 focal/distance lookup tables
-│   │   ├── PelcoDFrame.h/.cpp    # Framing, checksums, and stream splitting
-│   │   ├── PelcoDTypes.h         # Command constants, registers, enums
-│   │   ├── ProtocolBuilder.h/.cpp# Pelco-D command frame factory
-│   │   ├── ProtocolParser.h/.cpp # Telemetry response parser
-│   │   ├── SerialTransport.h/.cpp# Linux/Windows serial port driver
-│   │   └── TcpTransport.h/.cpp   # Linux/Windows TCP socket driver
-│   └── FujinonSX800Qt/           # Qt 6 adapter layer
-│       ├── QFujinonCamera.h      # QObject wrapper with signals/slots
-│       └── QFujinonCamera.cpp
-├── app-qt/                       # Qt 6 desktop application
-│   ├── main.cpp
-│   ├── MainWindow.h/.cpp         # Main dashboard window
-│   ├── resources.qrc             # Application resources
-│   ├── tabs/                     # Control tabs (Optics, Quality, DayNight, etc.)
-│   └── widgets/                  # Connection bar and Traffic Inspector
-└── tests/                        # Automated unit and concurrency test suites
-    ├── TestCircularByteRing.cpp  # SPSC lock-free throughput and concurrency tests
-    ├── TestMockCamera.cpp        # Full round-trip simulation tests
-    ├── TestOpticalTables.cpp     # Focal length and distance lookup validation
-    ├── TestPelcoDFrame.cpp       # Framing and checksum calculation tests
-    ├── TestProtocolBuilder.cpp   # Command frame generation tests
-    └── TestProtocolParser.cpp    # Telemetry and response parsing tests
-```
-
 ---
 
 ## Prerequisites
