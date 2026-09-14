@@ -51,6 +51,9 @@ Cross-platform C++17 controller and Qt 6 GUI application for the **Fujinon SX800
   - **Serial/RS-485**: POSIX `termios` on Linux, Win32 Communications API on Windows (`CreateFileA`, `SetCommState`, `SetCommTimeouts`).
   - **TCP Sockets**: POSIX BSD sockets on Linux, Winsock2 (`WSAStartup`) on Windows with non-blocking connect timeouts.
   - **UDP Sockets**: Connected UDP datagrams with optional local-port binding for IP bridges.
+- **Bus Discovery**:
+  - Asynchronous Pelco-D address scanning is available through `BusScanner` for addresses 1-31.
+  - Scans report progress, response timing, discovered raw frames, and support pause/resume/cancellation.
 - **Hardware-Free Testing**:
   - Includes `MockCameraDevice` simulating Fujinon SX800 register responses and state transitions for offline testing and CI.
 

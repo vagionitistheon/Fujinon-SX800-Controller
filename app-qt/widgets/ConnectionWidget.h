@@ -28,6 +28,7 @@ public:
 
 signals:
     void connectRequested(std::shared_ptr<FujinonSX800::ITransport> transport, std::uint8_t address);
+    void scanBusRequested(std::shared_ptr<FujinonSX800::ITransport> transport);
     void disconnectRequested();
     void refreshPortsRequested();
 
@@ -38,11 +39,13 @@ public slots:
 
 private slots:
     void handleConnectClicked();
+    void handleScanBusClicked();
     void handleModeChanged(int index);
 
 private:
     void setupUi();
     void updateLedState(bool connected);
+    [[nodiscard]] std::shared_ptr<FujinonSX800::ITransport> createTransport(std::uint8_t address) const;
 
     QComboBox* cmbMode { nullptr };
     QStackedWidget* stackedConfig { nullptr };
@@ -70,6 +73,7 @@ private:
     // Common
     QSpinBox* spinAddress { nullptr };
     QPushButton* btnConnect { nullptr };
+    QPushButton* btnScanBus { nullptr };
     QLabel* lblLed { nullptr };
     QLabel* lblStatusText { nullptr };
 

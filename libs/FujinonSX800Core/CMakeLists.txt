@@ -21,6 +21,8 @@ add_library(FujinonSX800Core STATIC
     TcpTransport.cpp
     UdpTransport.h
     UdpTransport.cpp
+    BusScanner.h
+    BusScanner.cpp
     MockCameraDevice.h
     MockCameraDevice.cpp
     CircularByteRing.h

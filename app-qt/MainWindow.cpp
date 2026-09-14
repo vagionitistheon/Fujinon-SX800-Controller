@@ -3,6 +3,7 @@
 
 #include "app-qt/MainWindow.h"
 
+#include <QMetaObject>
 #include <QStatusBar>
 #include <QToolBar>
 
@@ -61,6 +62,7 @@ void MainWindow::setupUi()
 void MainWindow::setupConnections()
 {
     connect(connectionWidget, &ConnectionWidget::connectRequested, this, &MainWindow::handleConnect);
+    connect(connectionWidget, &ConnectionWidget::scanBusRequested, this, &MainWindow::handleScanBus);
     connect(connectionWidget, &ConnectionWidget::disconnectRequested, this, &MainWindow::handleDisconnect);
 
     connect(camera, &FujinonSX800Qt::QFujinonCamera::statusUpdated, this, &MainWindow::handleStatusUpdated);
@@ -104,6 +106,34 @@ void MainWindow::handleConnect(std::shared_ptr<FujinonSX800::ITransport> transpo
         statusBar()->showMessage(tr("Connected to camera (ID: %1).").arg(address));
     } else {
         statusBar()->showMessage(tr("Failed to connect to transport device."));
+    }
+}
+
+void MainWindow::handleScanBus(std::shared_ptr<FujinonSX800::ITransport> transport)
+{
+    if (camera->isConnected()) {
+        statusBar()->showMessage(tr("Disconnect the camera before scanning the bus."), 5000);
+        return;
+    }
+
+    busScanner = std::make_unique<FujinonSX800::BusScanner>(std::move(transport));
+    busScanner->setDeviceDiscoveredCallback([this](const FujinonSX800::DiscoveredDevice& device) {
+        const auto address = static_cast<int>(device.address);
+        QMetaObject::invokeMethod(this,
+            [this, address] { statusBar()->showMessage(tr("Bus scan found camera address %1").arg(address), 3000); });
+    });
+    busScanner->setScanFinishedCallback([this](const std::vector<FujinonSX800::DiscoveredDevice>& devices) {
+        const auto count = static_cast<int>(devices.size());
+        QMetaObject::invokeMethod(this, [this, count] {
+            statusBar()->showMessage(tr("Bus scan complete: %1 device(s) discovered").arg(count), 5000);
+        });
+    });
+
+    if (!busScanner->startScan()) {
+        statusBar()->showMessage(tr("Unable to start bus scan."), 5000);
+        busScanner.reset();
+    } else {
+        statusBar()->showMessage(tr("Scanning Pelco-D addresses 1-31..."));
     }
 }
 

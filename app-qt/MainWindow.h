@@ -3,6 +3,7 @@
 /// @file MainWindow.h
 /// @brief Main application window hosting dashboard tabs and traffic inspector.
 
+#include "FujinonSX800Core/BusScanner.h"
 #include "QFujinonCamera.h"
 #include "app-qt/tabs/DayNightTab.h"
 #include "app-qt/tabs/ImageQualityTab.h"
@@ -30,6 +31,7 @@ public:
 
 private slots:
     void handleConnect(std::shared_ptr<FujinonSX800::ITransport> transport, std::uint8_t address);
+    void handleScanBus(std::shared_ptr<FujinonSX800::ITransport> transport);
     void handleDisconnect();
     void handleStatusUpdated(const FujinonSX800::CameraStatus& status);
 
@@ -38,6 +40,7 @@ private:
     void setupConnections();
 
     FujinonSX800Qt::QFujinonCamera* camera { nullptr };
+    std::unique_ptr<FujinonSX800::BusScanner> busScanner;
 
     ConnectionWidget* connectionWidget { nullptr };
     QTabWidget* tabWidget { nullptr };

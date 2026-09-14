@@ -2,11 +2,18 @@
 /// @brief CLI entrypoint for the Fujinon SX800 Terminal User Interface (TUI) client.
 /// @author Theon Sensors / Maintainers
 
+#include "FujinonSX800Core/BusScanner.h"
+#include "FujinonSX800Core/SerialTransport.h"
+#include "FujinonSX800Core/TcpTransport.h"
+#include "FujinonSX800Core/UdpTransport.h"
 #include "TuiApp.h"
 
+#include <condition_variable>
 #include <cstdint>
 #include <cstdlib>
 #include <iostream>
+#include <memory>
+#include <mutex>
 #include <string>
 
 namespace {
@@ -21,6 +28,7 @@ void printUsage(const char* progName)
               << "  -s, --serial <port> [baud]    Connect via Serial/RS-485 port (e.g. /dev/ttyUSB0 9600)\n"
               << "  -t, --tcp <host> <port>       Connect via TCP/IP socket bridge (e.g. 192.168.1.100 5000)\n"
               << "  -u, --udp <host> <port> [local] Connect via UDP socket bridge\n"
+              << "      --scan                    Scan the selected transport for Pelco-D addresses and exit\n"
               << "  -a, --address <addr>          Target RS-485 device address [1-255] (default: 7)\n"
               << "  -h, --help                    Display this help message and exit\n\n"
               << "Interactive Keybindings:\n"
@@ -45,6 +53,7 @@ void printUsage(const char* progName)
 int main(int argc, char* argv[])
 {
     bool useMock { true };
+    bool scanBus { false };
     std::string serialPort {};
     std::uint32_t baudRate { 9600U };
     std::string tcpHost {};
@@ -60,6 +69,10 @@ int main(int argc, char* argv[])
         if (arg == "-h" || arg == "--help") {
             printUsage(argv[0]);
             return 0;
+        }
+        if (arg == "--scan") {
+            scanBus = true;
+            continue;
         }
         if (arg == "-m" || arg == "--mock") {
             useMock = true;
@@ -87,6 +100,44 @@ int main(int argc, char* argv[])
             printUsage(argv[0]);
             return 1;
         }
+    }
+
+    if (scanBus) {
+        std::shared_ptr<FujinonSX800::ITransport> transport;
+        if (!serialPort.empty()) {
+            transport = std::make_shared<FujinonSX800::SerialTransport>(serialPort, baudRate);
+        } else if (!tcpHost.empty()) {
+            transport = std::make_shared<FujinonSX800::TcpTransport>(tcpHost, tcpPort);
+        } else if (!udpHost.empty()) {
+            transport = std::make_shared<FujinonSX800::UdpTransport>(udpHost, udpPort, udpLocalPort);
+        } else {
+            transport = std::make_shared<FujinonSX800::MockCameraDevice>(address);
+        }
+
+        FujinonSX800::BusScanner scanner(transport);
+        std::mutex scanMutex;
+        std::condition_variable scanCv;
+        bool scanFinished { false };
+        scanner.setDeviceDiscoveredCallback([](const FujinonSX800::DiscoveredDevice& device) {
+            std::cout << "Found Pelco-D device at address " << static_cast<int>(device.address) << " ("
+                      << device.responseTimeMs << " ms)\n";
+        });
+        scanner.setScanProgressCallback([](std::uint8_t current, std::size_t scanned, std::size_t total) {
+            std::cout << "Scanned address " << static_cast<int>(current) << " (" << scanned << "/" << total << ")\n";
+        });
+        scanner.setScanFinishedCallback([&](const std::vector<FujinonSX800::DiscoveredDevice>&) {
+            std::lock_guard<std::mutex> lock(scanMutex);
+            scanFinished = true;
+            scanCv.notify_one();
+        });
+
+        if (!scanner.startScan()) {
+            std::cerr << "Failed to start Pelco-D bus scan\n";
+            return 1;
+        }
+        std::unique_lock<std::mutex> lock(scanMutex);
+        scanCv.wait(lock, [&] { return scanFinished; });
+        return 0;
     }
 
     FujinonSX800Tui::TuiApp app {};

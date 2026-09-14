@@ -144,6 +144,10 @@ void ConnectionWidget::setupUi()
     btnConnect->setMinimumWidth(85);
     mainLayout->addWidget(btnConnect);
 
+    btnScanBus = new QPushButton(tr("Scan Bus"), this);
+    btnScanBus->setToolTip(tr("Discover responsive Pelco-D camera addresses"));
+    mainLayout->addWidget(btnScanBus);
+
     // Status LED and Label
     lblLed = new QLabel(this);
     lblLed->setFixedSize(12, 12);
@@ -157,6 +161,7 @@ void ConnectionWidget::setupUi()
     connect(cmbMode, QOverload<int>::of(&QComboBox::currentIndexChanged), this, &ConnectionWidget::handleModeChanged);
     connect(btnRefreshPorts, &QPushButton::clicked, this, &ConnectionWidget::refreshSerialPorts);
     connect(btnConnect, &QPushButton::clicked, this, &ConnectionWidget::handleConnectClicked);
+    connect(btnScanBus, &QPushButton::clicked, this, &ConnectionWidget::handleScanBusClicked);
 }
 
 void ConnectionWidget::handleModeChanged(int index)
@@ -209,6 +214,26 @@ void ConnectionWidget::handleConnectClicked()
     }
 
     const auto address = static_cast<std::uint8_t>(spinAddress->value());
+    const auto transport = createTransport(static_cast<std::uint8_t>(spinAddress->value()));
+
+    if (transport) {
+        emit connectRequested(transport, address);
+    }
+}
+
+void ConnectionWidget::handleScanBusClicked()
+{
+    if (isConnected) {
+        return;
+    }
+    const auto transport = createTransport(static_cast<std::uint8_t>(spinAddress->value()));
+    if (transport) {
+        emit scanBusRequested(transport);
+    }
+}
+
+std::shared_ptr<FujinonSX800::ITransport> ConnectionWidget::createTransport(std::uint8_t address) const
+{
     const int mode = cmbMode->currentIndex();
     std::shared_ptr<FujinonSX800::ITransport> transport { nullptr };
 
@@ -236,9 +261,7 @@ void ConnectionWidget::handleConnectClicked()
         transport = std::make_shared<FujinonSX800::UdpTransport>(host.toStdString(), port, localPort);
     }
 
-    if (transport) {
-        emit connectRequested(transport, address);
-    }
+    return transport;
 }
 
 void ConnectionWidget::setConnectionState(bool connected)
