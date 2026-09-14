@@ -263,9 +263,7 @@ void SerialTransport::close()
 {
     m_running = false;
 
-    if (m_readThread.joinable()) {
-        m_readThread.join();
-    }
+    stopReadThread();
 
     if (m_handle != INVALID_SERIAL_HANDLE) {
         LOG(INFO) << "Closing serial port";
@@ -327,18 +325,6 @@ bool SerialTransport::sendData(const std::vector<std::uint8_t>& data)
 #endif
 }
 
-void SerialTransport::setDataCallback(DataReceivedCallback callback)
-{
-    std::lock_guard<std::mutex> lock(m_callbackMutex);
-    m_dataCallback = std::move(callback);
-}
-
-void SerialTransport::setStateCallback(StateChangedCallback callback)
-{
-    std::lock_guard<std::mutex> lock(m_callbackMutex);
-    m_stateCallback = std::move(callback);
-}
-
 void SerialTransport::readWorker()
 {
     std::array<std::uint8_t, 1024> buffer {};
@@ -351,10 +337,7 @@ void SerialTransport::readWorker()
 
         if (success) {
             if (bytesRead > 0) {
-                std::lock_guard<std::mutex> lock(m_callbackMutex);
-                if (m_dataCallback) {
-                    m_dataCallback(buffer.data(), static_cast<std::size_t>(bytesRead));
-                }
+                invokeDataCallback(buffer.data(), static_cast<std::size_t>(bytesRead));
             } else {
                 std::this_thread::sleep_for(std::chrono::milliseconds(10));
             }
@@ -377,10 +360,7 @@ void SerialTransport::readWorker()
         if (ret > 0 && (pfd.revents & POLLIN)) {
             const ssize_t bytesRead = ::read(m_handle, buffer.data(), buffer.size());
             if (bytesRead > 0) {
-                std::lock_guard<std::mutex> lock(m_callbackMutex);
-                if (m_dataCallback) {
-                    m_dataCallback(buffer.data(), static_cast<std::size_t>(bytesRead));
-                }
+                invokeDataCallback(buffer.data(), static_cast<std::size_t>(bytesRead));
             } else if (bytesRead < 0 && (errno != EAGAIN && errno != EWOULDBLOCK)) {
                 notifyState(TransportState::Error, "Serial read error");
                 break;
@@ -391,18 +371,6 @@ void SerialTransport::readWorker()
         }
     }
 #endif
-}
-
-void SerialTransport::notifyState(TransportState state, const std::string& errorMsg)
-{
-    StateChangedCallback cb;
-    {
-        std::lock_guard<std::mutex> lock(m_callbackMutex);
-        cb = m_stateCallback;
-    }
-    if (cb) {
-        cb(state, errorMsg);
-    }
 }
 
 } // namespace FujinonSX800

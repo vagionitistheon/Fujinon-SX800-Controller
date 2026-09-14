@@ -277,9 +277,7 @@ void TcpTransport::close()
 #endif
     }
 
-    if (m_readThread.joinable()) {
-        m_readThread.join();
-    }
+    stopReadThread();
 
     if (m_sockfd != InvalidSocket) {
         LOG(INFO) << "Closing TCP socket";
@@ -343,18 +341,6 @@ bool TcpTransport::sendData(const std::vector<std::uint8_t>& data)
     return false;
 }
 
-void TcpTransport::setDataCallback(DataReceivedCallback callback)
-{
-    std::lock_guard<std::mutex> lock(m_callbackMutex);
-    m_dataCallback = std::move(callback);
-}
-
-void TcpTransport::setStateCallback(StateChangedCallback callback)
-{
-    std::lock_guard<std::mutex> lock(m_callbackMutex);
-    m_stateCallback = std::move(callback);
-}
-
 void TcpTransport::readWorker()
 {
     std::array<std::uint8_t, 2048> buffer {};
@@ -382,10 +368,7 @@ void TcpTransport::readWorker()
             );
 
             if (bytesRead > 0) {
-                std::lock_guard<std::mutex> lock(m_callbackMutex);
-                if (m_dataCallback) {
-                    m_dataCallback(buffer.data(), static_cast<std::size_t>(bytesRead));
-                }
+                invokeDataCallback(buffer.data(), static_cast<std::size_t>(bytesRead));
             } else if (bytesRead == 0) {
                 notifyState(TransportState::Disconnected, "Remote host closed connection");
                 break;
@@ -395,18 +378,6 @@ void TcpTransport::readWorker()
                 break;
             }
         }
-    }
-}
-
-void TcpTransport::notifyState(TransportState state, const std::string& errorMsg)
-{
-    StateChangedCallback cb;
-    {
-        std::lock_guard<std::mutex> lock(m_callbackMutex);
-        cb = m_stateCallback;
-    }
-    if (cb) {
-        cb(state, errorMsg);
     }
 }
 

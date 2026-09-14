@@ -5,6 +5,8 @@ add_library(FujinonSX800Core STATIC
     PelcoDTypes.h
     CameraStatus.h
     ITransport.h
+    BaseTransport.h
+    BaseTransport.cpp
     PelcoDFrame.h
     PelcoDFrame.cpp
     OpticalTables.h

@@ -252,9 +252,7 @@ namespace {
         if (socket != InvalidSocket) {
             CLOSE_SOCKET(socket);
         }
-        if (m_readThread.joinable()) {
-            m_readThread.join();
-        }
+        stopReadThread();
         if (wasRunning || socket != InvalidSocket) {
             notifyState(TransportState::Disconnected, "UDP socket closed");
         }
@@ -283,18 +281,6 @@ namespace {
             notifyState(TransportState::Error, "UDP send failed: " + socketError());
         }
         return complete;
-    }
-
-    void UdpTransport::setDataCallback(DataReceivedCallback callback)
-    {
-        std::lock_guard<std::mutex> lock(m_callbackMutex);
-        m_dataCallback = std::move(callback);
-    }
-
-    void UdpTransport::setStateCallback(StateChangedCallback callback)
-    {
-        std::lock_guard<std::mutex> lock(m_callbackMutex);
-        m_stateCallback = std::move(callback);
     }
 
     void UdpTransport::readWorker()
@@ -336,30 +322,11 @@ namespace {
         const ssize_t received = ::recv(socket, buffer.data(), buffer.size(), 0);
 #endif
             if (received > 0) {
-                DataReceivedCallback callback;
-                {
-                    std::lock_guard<std::mutex> lock(m_callbackMutex);
-                    callback = m_dataCallback;
-                }
-                if (callback) {
-                    callback(buffer.data(), static_cast<std::size_t>(received));
-                }
+                invokeDataCallback(buffer.data(), static_cast<std::size_t>(received));
             } else if (received < 0 && !IS_WOULDBLOCK() && m_running.load()) {
                 notifyState(TransportState::Error, "UDP receive failed: " + socketError());
                 break;
             }
-        }
-    }
-
-    void UdpTransport::notifyState(TransportState state, const std::string& message)
-    {
-        StateChangedCallback callback;
-        {
-            std::lock_guard<std::mutex> lock(m_callbackMutex);
-            callback = m_stateCallback;
-        }
-        if (callback) {
-            callback(state, message);
         }
     }
 
