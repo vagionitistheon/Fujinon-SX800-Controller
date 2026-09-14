@@ -25,3 +25,39 @@ add_sx800_test(TestCircularByteRing TestCircularByteRing.cpp)
 add_sx800_test(TestTransportState TestTransportState.cpp)
 add_sx800_test(TestUdpTransport TestUdpTransport.cpp)
 add_sx800_test(TestBusScanner TestBusScanner.cpp)
+add_sx800_test(TestTransportLifecycle TestTransportLifecycle.cpp)
+
+add_executable(TestQFujinonCamera TestQFujinonCamera.cpp)
+target_include_directories(TestQFujinonCamera PRIVATE
+    ${CMAKE_CURRENT_SOURCE_DIR}
+    ${CMAKE_SOURCE_DIR}/libs/FujinonSX800Qt
+)
+target_link_libraries(TestQFujinonCamera PRIVATE FujinonSX800Qt Qt6::Core Qt6::Test)
+apply_compiler_flags(TestQFujinonCamera)
+if(MSVC)
+    target_compile_options(TestQFujinonCamera PRIVATE /UNDEBUG)
+else()
+    target_compile_options(TestQFujinonCamera PRIVATE -UNDEBUG)
+endif()
+add_test(NAME TestQFujinonCamera COMMAND TestQFujinonCamera)
+
+add_executable(TestConnectionWidget
+    TestConnectionWidget.cpp
+    ${CMAKE_SOURCE_DIR}/app-qt/widgets/ConnectionWidget.cpp
+)
+target_include_directories(TestConnectionWidget PRIVATE
+    ${CMAKE_CURRENT_SOURCE_DIR}
+    ${CMAKE_SOURCE_DIR}
+    ${CMAKE_SOURCE_DIR}/app-qt
+    ${CMAKE_SOURCE_DIR}/app-qt/widgets
+    ${CMAKE_SOURCE_DIR}/libs/FujinonSX800Core
+)
+target_link_libraries(TestConnectionWidget PRIVATE FujinonSX800Core Qt6::Core Qt6::Gui Qt6::Widgets Qt6::Test)
+apply_compiler_flags(TestConnectionWidget)
+if(MSVC)
+    target_compile_options(TestConnectionWidget PRIVATE /UNDEBUG)
+else()
+    target_compile_options(TestConnectionWidget PRIVATE -UNDEBUG)
+endif()
+add_test(NAME TestConnectionWidget COMMAND TestConnectionWidget)
+set_tests_properties(TestConnectionWidget PROPERTIES ENVIRONMENT "QT_QPA_PLATFORM=offscreen")

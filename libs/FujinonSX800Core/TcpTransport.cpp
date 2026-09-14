@@ -157,9 +157,10 @@ bool TcpTransport::open()
         port = m_port;
     }
 
-    if (host.empty()) {
-        LOG(ERROR) << "Cannot open TCP transport: host address is empty";
-        notifyState(TransportState::Error, "Host address is empty");
+    if (host.empty() || port == 0U) {
+        const std::string reason = host.empty() ? "Host address is empty" : "TCP port is zero";
+        LOG(ERROR) << "Cannot open TCP transport: " << reason;
+        notifyState(TransportState::Error, reason);
         return false;
     }
 
