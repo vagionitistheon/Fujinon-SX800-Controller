@@ -47,12 +47,15 @@ public:
     void setAutoQueryOnConnect(bool enable);
     void setTelemetryPolling(bool enable, int intervalMs = 1000);
     void setQueryTimeoutMs(int timeoutMs);
+    void setAutoReconnect(bool enable);
+    [[nodiscard]] bool getAutoReconnect() const noexcept;
 
 signals:
     void statusUpdated(const FujinonSX800::CameraStatus& status);
     void trafficLogged(bool isTx, const QByteArray& packet, const QString& description);
     void frameLogged(const QByteArray& frame, bool isTx);
     void connectionStateChanged(bool connected);
+    void transportStateChanged(FujinonSX800::TransportState state, const QString& message);
     void queryTimeoutOccurred(const QString& queryTag);
 
 public slots:
@@ -171,6 +174,7 @@ private:
     std::shared_ptr<FujinonSX800::ITransport> m_transport;
     std::unique_ptr<FujinonSX800::FujinonCamera> m_camera;
     std::uint8_t m_address { 1U };
+    bool m_autoReconnect { false };
 };
 
 } // namespace FujinonSX800Qt

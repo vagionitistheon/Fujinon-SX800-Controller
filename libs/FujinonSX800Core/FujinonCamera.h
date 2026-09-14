@@ -29,6 +29,7 @@ public:
     using StatusCallback = std::function<void(const CameraStatus& status)>;
     using TrafficCallback = std::function<void(bool isTx, const std::vector<std::uint8_t>& frame)>;
     using TimeoutCallback = std::function<void(const std::string& queryTag)>;
+    using TransportStateCallback = std::function<void(TransportState state, const std::string& errorMsg)>;
 
     explicit FujinonCamera(std::shared_ptr<ITransport> transport, std::uint8_t address = 1U);
     ~FujinonCamera();
@@ -49,6 +50,7 @@ public:
     void addStatusCallback(StatusCallback cb);
     void addTrafficCallback(TrafficCallback cb);
     void addTimeoutCallback(TimeoutCallback cb);
+    void addTransportStateCallback(TransportStateCallback cb);
     [[nodiscard]] CameraStatus getStatus() const;
 
     void setAutoQueryOnConnect(bool enable) noexcept;
@@ -57,6 +59,8 @@ public:
     [[nodiscard]] bool getTelemetryPolling() const noexcept;
     void setQueryTimeoutMs(std::uint32_t timeoutMs) noexcept;
     [[nodiscard]] std::uint32_t getQueryTimeoutMs() const noexcept;
+    void setAutoReconnect(bool enable) noexcept;
+    [[nodiscard]] bool getAutoReconnect() const noexcept;
 
     // Direct Optics & PTZ controls
     void zoomTele();
@@ -133,8 +137,11 @@ private:
     void enqueueCommand(const std::vector<std::uint8_t>& frame, std::string queryTag = "");
     void workerLoop();
     void pollingLoop();
+    void reconnectLoop();
+    void startReconnect();
     void rxLoop();
     void onDataReceived(const std::uint8_t* data, std::size_t size);
+    void onTransportStateChanged(TransportState state, const std::string& errorMsg);
     void dispatchFrame(const std::vector<std::uint8_t>& frame);
     void checkQueryTimeout();
     [[nodiscard]] static bool is18ByteQuery(std::string_view tag) noexcept;
@@ -149,9 +156,11 @@ private:
     std::uint8_t m_address { 1U };
 
     std::atomic<bool> m_running { false };
+    std::atomic<bool> m_connected { false };
     std::thread m_workerThread;
     std::thread m_pollThread;
     std::thread m_rxThread;
+    std::thread m_reconnectThread;
 
     std::mutex m_queueMutex;
     std::condition_variable m_queueCv;
@@ -169,6 +178,11 @@ private:
     std::mutex m_pollMutex;
     std::condition_variable m_pollCv;
 
+    std::atomic<bool> m_autoReconnect { false };
+    std::atomic<bool> m_reconnectActive { false };
+    std::mutex m_reconnectMutex;
+    std::condition_variable m_reconnectCv;
+
     mutable std::mutex m_statusMutex;
     CameraStatus m_status;
     std::string m_lastQueryTag;
@@ -182,6 +196,7 @@ private:
     std::vector<StatusCallback> m_statusCallbacks;
     std::vector<TrafficCallback> m_trafficCallbacks;
     std::vector<TimeoutCallback> m_timeoutCallbacks;
+    std::vector<TransportStateCallback> m_transportStateCallbacks;
 };
 
 } // namespace FujinonSX800

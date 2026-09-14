@@ -70,6 +70,16 @@ void MainWindow::setupConnections()
     connect(camera, &FujinonSX800Qt::QFujinonCamera::statusUpdated, osdVideoTab, &OsdVideoTab::updateTelemetry);
     connect(camera, &FujinonSX800Qt::QFujinonCamera::statusUpdated, sdCardMenuTab, &SdCardMenuTab::updateTelemetry);
     connect(camera, &FujinonSX800Qt::QFujinonCamera::statusUpdated, systemTab, &SystemTab::updateTelemetry);
+    connect(camera, &FujinonSX800Qt::QFujinonCamera::connectionStateChanged, connectionWidget,
+        &ConnectionWidget::setConnectionState);
+    connect(camera, &FujinonSX800Qt::QFujinonCamera::transportStateChanged, this,
+        [this](FujinonSX800::TransportState state, const QString& message) {
+            if (state == FujinonSX800::TransportState::Error) {
+                statusBar()->showMessage(tr("Transport error: %1").arg(message), 5000);
+            } else if (state == FujinonSX800::TransportState::Disconnected) {
+                statusBar()->showMessage(tr("Transport disconnected: %1").arg(message), 5000);
+            }
+        });
 
     connect(camera, &FujinonSX800Qt::QFujinonCamera::frameLogged, inspectorWidget, &TrafficInspectorWidget::logFrame);
     connect(inspectorWidget, &TrafficInspectorWidget::sendRawHexRequested, camera,
@@ -84,6 +94,7 @@ void MainWindow::setupConnections()
 void MainWindow::handleConnect(std::shared_ptr<FujinonSX800::ITransport> transport, std::uint8_t address)
 {
     camera->setTransport(transport, address);
+    camera->setAutoReconnect(true);
     const bool ok = camera->start();
     connectionWidget->setConnectionState(ok);
 

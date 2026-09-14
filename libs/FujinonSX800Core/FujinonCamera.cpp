@@ -26,13 +26,18 @@ bool FujinonCamera::start()
     }
 
     m_transport->setDataCallback([this](const std::uint8_t* data, std::size_t size) { onDataReceived(data, size); });
+    m_transport->setStateCallback(
+        [this](TransportState state, const std::string& errorMsg) { onTransportStateChanged(state, errorMsg); });
 
     if (!m_transport->isOpen()) {
         if (!m_transport->open()) {
+            m_transport->setDataCallback(nullptr);
+            m_transport->setStateCallback(nullptr);
             return false;
         }
     }
 
+    m_connected = true;
     {
         std::lock_guard<std::mutex> lock(m_statusMutex);
         m_status.isConnected = true;
@@ -63,6 +68,7 @@ void FujinonCamera::stop()
     m_rxCv.notify_all();
     m_responseCv.notify_all();
     m_pollCv.notify_all();
+    m_reconnectCv.notify_all();
 
     if (m_rxThread.joinable()) {
         m_rxThread.join();
@@ -73,12 +79,20 @@ void FujinonCamera::stop()
     if (m_pollThread.joinable()) {
         m_pollThread.join();
     }
+    if (m_reconnectThread.joinable()) {
+        m_reconnectThread.join();
+    }
     m_awaitingResponse = false;
 
+    if (m_transport) {
+        m_transport->setDataCallback(nullptr);
+        m_transport->setStateCallback(nullptr);
+    }
     if (m_transport && m_transport->isOpen()) {
         m_transport->close();
     }
 
+    m_connected = false;
     {
         std::lock_guard<std::mutex> lock(m_statusMutex);
         m_status.isConnected = false;
@@ -87,7 +101,7 @@ void FujinonCamera::stop()
 
 bool FujinonCamera::isConnected() const noexcept
 {
-    return m_running && m_transport && m_transport->isOpen();
+    return m_running && m_connected.load();
 }
 
 void FujinonCamera::setAddress(std::uint8_t address)
@@ -121,6 +135,12 @@ void FujinonCamera::addTimeoutCallback(TimeoutCallback cb)
     m_timeoutCallbacks.push_back(std::move(cb));
 }
 
+void FujinonCamera::addTransportStateCallback(TransportStateCallback cb)
+{
+    std::lock_guard<std::mutex> lock(m_callbackMutex);
+    m_transportStateCallbacks.push_back(std::move(cb));
+}
+
 void FujinonCamera::setAutoQueryOnConnect(bool enable) noexcept
 {
     m_autoQueryOnConnect = enable;
@@ -151,6 +171,19 @@ void FujinonCamera::setQueryTimeoutMs(std::uint32_t timeoutMs) noexcept
 std::uint32_t FujinonCamera::getQueryTimeoutMs() const noexcept
 {
     return m_queryTimeoutMs;
+}
+
+void FujinonCamera::setAutoReconnect(bool enable) noexcept
+{
+    m_autoReconnect = enable;
+    if (!enable) {
+        m_reconnectCv.notify_all();
+    }
+}
+
+bool FujinonCamera::getAutoReconnect() const noexcept
+{
+    return m_autoReconnect.load();
 }
 
 void FujinonCamera::checkQueryTimeout()
@@ -291,6 +324,51 @@ void FujinonCamera::pollingLoop()
     }
 }
 
+void FujinonCamera::startReconnect()
+{
+    std::lock_guard<std::mutex> lock(m_reconnectMutex);
+    if (m_reconnectActive.load() || !m_running || !m_autoReconnect) {
+        return;
+    }
+
+    if (m_reconnectThread.joinable()) {
+        m_reconnectThread.join();
+    }
+
+    m_reconnectActive = true;
+    m_reconnectThread = std::thread(&FujinonCamera::reconnectLoop, this);
+}
+
+void FujinonCamera::reconnectLoop()
+{
+    constexpr std::uint32_t initialDelayMs { 500U };
+    constexpr std::uint32_t maxDelayMs { 30000U };
+    std::uint32_t delayMs { initialDelayMs };
+
+    while (m_running && m_autoReconnect) {
+        std::unique_lock<std::mutex> lock(m_reconnectMutex);
+        const bool cancelled = m_reconnectCv.wait_for(
+            lock, std::chrono::milliseconds(delayMs), [this] { return !m_running || !m_autoReconnect; });
+        lock.unlock();
+
+        if (cancelled || !m_running || !m_autoReconnect) {
+            break;
+        }
+
+        if (m_transport && m_transport->isOpen()) {
+            m_transport->close();
+        }
+
+        if (m_transport && m_transport->open()) {
+            break;
+        }
+
+        delayMs = std::min(delayMs * 2U, maxDelayMs);
+    }
+
+    m_reconnectActive = false;
+}
+
 void FujinonCamera::onDataReceived(const std::uint8_t* data, std::size_t size)
 {
     if (data != nullptr && size > 0U) {
@@ -302,6 +380,42 @@ void FujinonCamera::onDataReceived(const std::uint8_t* data, std::size_t size)
         }
         VLOG(2) << "Wrote " << size << " bytes to RX ring buffer";
         m_rxCv.notify_one();
+    }
+}
+
+void FujinonCamera::onTransportStateChanged(TransportState state, const std::string& errorMsg)
+{
+    const bool connected = state == TransportState::Connected;
+    m_connected = connected;
+
+    CameraStatus status;
+    {
+        std::lock_guard<std::mutex> lock(m_statusMutex);
+        m_status.isConnected = connected;
+        status = m_status;
+    }
+
+    std::vector<StatusCallback> statusCallbacks;
+    std::vector<TransportStateCallback> stateCallbacks;
+    {
+        std::lock_guard<std::mutex> lock(m_callbackMutex);
+        statusCallbacks = m_statusCallbacks;
+        stateCallbacks = m_transportStateCallbacks;
+    }
+
+    for (const auto& callback : statusCallbacks) {
+        if (callback) {
+            callback(status);
+        }
+    }
+    for (const auto& callback : stateCallbacks) {
+        if (callback) {
+            callback(state, errorMsg);
+        }
+    }
+
+    if ((state == TransportState::Disconnected || state == TransportState::Error) && m_running && m_autoReconnect) {
+        startReconnect();
     }
 }
 

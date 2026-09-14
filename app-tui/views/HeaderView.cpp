@@ -9,8 +9,8 @@
 
 namespace FujinonSX800Tui {
 
-void HeaderView::render(Canvas& canvas, const FujinonSX800::CameraStatus& status, bool isConnected, bool isMock,
-    const std::string& connInfo, int activeTab)
+void HeaderView::render(Canvas& canvas, const FujinonSX800::CameraStatus& status, bool isConnected, bool isReconnecting,
+    bool isMock, const std::string& connInfo, int activeTab)
 {
     const int w = canvas.width();
 
@@ -35,7 +35,11 @@ void HeaderView::render(Canvas& canvas, const FujinonSX800::CameraStatus& status
     // Connection Status
     Style connStyle {};
     connStyle.bg = Palette::PanelBg;
-    if (isConnected) {
+    if (isReconnecting) {
+        connStyle.fg = Palette::AccentAmber;
+        connStyle.bold = true;
+        canvas.drawString(48, 0, std::string(Symbols::DotPending) + " RECONNECTING", connStyle);
+    } else if (isConnected) {
         connStyle.fg = Palette::AccentGreen;
         connStyle.bold = true;
         std::string connText = std::string(Symbols::IconConnected) + " ONLINE";

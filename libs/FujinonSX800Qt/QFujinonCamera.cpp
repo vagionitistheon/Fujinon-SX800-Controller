@@ -52,6 +52,16 @@ bool QFujinonCamera::connectCamera()
         QMetaObject::invokeMethod(this, [this, tag] { emit queryTimeoutOccurred(tag); });
     });
 
+    m_camera->addTransportStateCallback([this](FujinonSX800::TransportState state, const std::string& message) {
+        const QString text = QString::fromStdString(message);
+        QMetaObject::invokeMethod(this, [this, state, text] {
+            emit transportStateChanged(state, text);
+            emit connectionStateChanged(state == FujinonSX800::TransportState::Connected);
+        });
+    });
+
+    m_camera->setAutoReconnect(m_autoReconnect);
+
     const bool ok = m_camera->start();
     emit connectionStateChanged(ok);
     return ok;
@@ -78,9 +88,23 @@ void QFujinonCamera::setQueryTimeoutMs(int timeoutMs)
     }
 }
 
+void QFujinonCamera::setAutoReconnect(bool enable)
+{
+    m_autoReconnect = enable;
+    if (m_camera) {
+        m_camera->setAutoReconnect(enable);
+    }
+}
+
+bool QFujinonCamera::getAutoReconnect() const noexcept
+{
+    return m_autoReconnect;
+}
+
 void QFujinonCamera::disconnectCamera()
 {
     if (m_camera) {
+        m_camera->setAutoReconnect(false);
         m_camera->stop();
         m_camera.reset();
         emit connectionStateChanged(false);

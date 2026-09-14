@@ -34,7 +34,36 @@ void TuiApp::setupCameraCallbacks()
     m_camera->addTrafficCallback(
         [this](bool isTx, const std::vector<std::uint8_t>& frame) { m_trafficView.addFrame(frame, isTx); });
 
-    m_camera->addTimeoutCallback([this](const std::string& queryTag) { m_statusMsg = "Query timeout: " + queryTag; });
+    m_camera->addTimeoutCallback(
+        [this](const std::string& queryTag) { setStatusMessage("Query timeout: " + queryTag); });
+
+    m_camera->addTransportStateCallback([this](FujinonSX800::TransportState state, const std::string& message) {
+        std::lock_guard<std::mutex> lock(m_statusMutex);
+        m_status.isConnected = state == FujinonSX800::TransportState::Connected;
+        m_reconnecting = state == FujinonSX800::TransportState::Connecting
+            || state == FujinonSX800::TransportState::Disconnected || state == FujinonSX800::TransportState::Error;
+
+        switch (state) {
+        case FujinonSX800::TransportState::Connecting:
+            m_statusMsg = "Connecting: " + message;
+            break;
+        case FujinonSX800::TransportState::Connected:
+            m_statusMsg = "Connected: " + message;
+            break;
+        case FujinonSX800::TransportState::Disconnected:
+            m_statusMsg = "Disconnected: " + message;
+            break;
+        case FujinonSX800::TransportState::Error:
+            m_statusMsg = "Reconnect pending: " + message;
+            break;
+        }
+    });
+}
+
+void TuiApp::setStatusMessage(std::string message)
+{
+    std::lock_guard<std::mutex> lock(m_statusMutex);
+    m_statusMsg = std::move(message);
 }
 
 bool TuiApp::initMock(std::uint8_t address)
@@ -44,6 +73,7 @@ bool TuiApp::initMock(std::uint8_t address)
     m_camera = std::make_unique<FujinonSX800::FujinonCamera>(m_transport, address);
 
     setupCameraCallbacks();
+    m_camera->setAutoReconnect(true);
     m_camera->setAutoQueryOnConnect(true);
     m_camera->setTelemetryPolling(true, 500U);
 
@@ -53,7 +83,7 @@ bool TuiApp::initMock(std::uint8_t address)
 
     m_isMock = true;
     m_connInfo = "Virtual Simulator";
-    m_statusMsg = "Connected to Mock SX800 Camera";
+    setStatusMessage("Connected to Mock SX800 Camera");
     return true;
 }
 
@@ -63,6 +93,7 @@ bool TuiApp::initSerial(const std::string& port, std::uint32_t baud, std::uint8_
     m_camera = std::make_unique<FujinonSX800::FujinonCamera>(m_transport, address);
 
     setupCameraCallbacks();
+    m_camera->setAutoReconnect(true);
     m_camera->setAutoQueryOnConnect(true);
     m_camera->setTelemetryPolling(true, 500U);
 
@@ -72,7 +103,7 @@ bool TuiApp::initSerial(const std::string& port, std::uint32_t baud, std::uint8_
 
     m_isMock = false;
     m_connInfo = port + " @" + std::to_string(baud);
-    m_statusMsg = "Connected via Serial (" + port + ")";
+    setStatusMessage("Connected via Serial (" + port + ")");
     return true;
 }
 
@@ -82,6 +113,7 @@ bool TuiApp::initTcp(const std::string& host, std::uint16_t port, std::uint8_t a
     m_camera = std::make_unique<FujinonSX800::FujinonCamera>(m_transport, address);
 
     setupCameraCallbacks();
+    m_camera->setAutoReconnect(true);
     m_camera->setAutoQueryOnConnect(true);
     m_camera->setTelemetryPolling(true, 500U);
 
@@ -91,7 +123,7 @@ bool TuiApp::initTcp(const std::string& host, std::uint16_t port, std::uint8_t a
 
     m_isMock = false;
     m_connInfo = host + ":" + std::to_string(port);
-    m_statusMsg = "Connected via TCP (" + m_connInfo + ")";
+    setStatusMessage("Connected via TCP (" + m_connInfo + ")");
     return true;
 }
 
@@ -99,6 +131,7 @@ void TuiApp::stop()
 {
     m_running = false;
     if (m_camera) {
+        m_camera->setAutoReconnect(false);
         m_camera->stop();
     }
     m_terminal.shutdown();
@@ -128,7 +161,7 @@ void TuiApp::switchConnection(
     }
 
     if (!ok) {
-        m_statusMsg = "Connection failed! Reverting to virtual mock device";
+        setStatusMessage("Connection failed! Reverting to virtual mock device");
         static_cast<void>(initMock(address));
     }
 }
@@ -180,38 +213,38 @@ void TuiApp::handleInput(const KeyEvent& ev)
     // Motion & Camera Control Shortcuts
     if (ev.isChar('z') || ev.isChar('Z')) {
         m_camera->zoomTele();
-        m_statusMsg = "Command: Zoom Tele (In)";
+        setStatusMessage("Command: Zoom Tele (In)");
     } else if (ev.isChar('x') || ev.isChar('X')) {
         m_camera->zoomWide();
-        m_statusMsg = "Command: Zoom Wide (Out)";
+        setStatusMessage("Command: Zoom Wide (Out)");
     } else if (ev.isChar('s') || ev.isChar('S') || ev.key == Key::Space) {
         m_camera->zoomStop();
         m_camera->focusStop();
-        m_statusMsg = "Command: Optical Motion Stopped";
+        setStatusMessage("Command: Optical Motion Stopped");
     } else if (ev.isChar('f') || ev.isChar('F')) {
         m_camera->focusNear();
-        m_statusMsg = "Command: Focus Near";
+        setStatusMessage("Command: Focus Near");
     } else if (ev.isChar('g') || ev.isChar('G')) {
         m_camera->focusFar();
-        m_statusMsg = "Command: Focus Far";
+        setStatusMessage("Command: Focus Far");
     } else if (ev.isChar('a') || ev.isChar('A')) {
         m_camera->setOnePushAf();
-        m_statusMsg = "Command: One-Push AF Triggered";
+        setStatusMessage("Command: One-Push AF Triggered");
     } else if (ev.isChar('o') || ev.isChar('O')) {
         const auto cur = m_status.opticalStabilization;
         const auto next = (cur == FujinonSX800::OpticalStabilization::Off) ? FujinonSX800::OpticalStabilization::OIS
                                                                            : FujinonSX800::OpticalStabilization::Off;
         m_camera->setOpticalStabilization(next);
-        m_statusMsg = "Command: Toggled OIS Stabilizer";
+        setStatusMessage("Command: Toggled OIS Stabilizer");
     } else if (ev.isChar('i') || ev.isChar('I')) {
         m_camera->setManualIris(FujinonSX800::ManualIrisFNo::F5_6);
-        m_statusMsg = "Command: Set Manual Iris (F5.6)";
+        setStatusMessage("Command: Set Manual Iris (F5.6)");
     } else if (ev.isChar('r') || ev.isChar('R')) {
         m_camera->queryAll();
-        m_statusMsg = "Command: Queried Complete Camera Telemetry";
+        setStatusMessage("Command: Queried Complete Camera Telemetry");
     } else if (ev.isChar('k') || ev.isChar('K')) {
         m_trafficView.clear();
-        m_statusMsg = "Inspector traffic buffer cleared";
+        setStatusMessage("Inspector traffic buffer cleared");
     } else if (ev.isChar('m') || ev.isChar('M')) {
         if (!m_isMock) {
             if (m_camera) {
@@ -235,15 +268,19 @@ void TuiApp::render()
     m_canvas.clear(Palette::DarkBg);
 
     FujinonSX800::CameraStatus currentStatus {};
+    std::string currentStatusMessage;
+    bool reconnecting { false };
     {
         std::lock_guard<std::mutex> lock(m_statusMutex);
         currentStatus = m_status;
+        currentStatusMessage = m_statusMsg;
+        reconnecting = m_reconnecting;
     }
 
     const bool connected = m_camera && m_camera->isConnected();
 
     // Render persistent Header (rows 0 .. 2)
-    m_headerView.render(m_canvas, currentStatus, connected, m_isMock, m_connInfo, m_activeTab);
+    m_headerView.render(m_canvas, currentStatus, connected, reconnecting, m_isMock, m_connInfo, m_activeTab);
 
     // Render active Tab view (rows 3 .. termH - 3)
     const int tabTop = 3;
@@ -276,7 +313,7 @@ void TuiApp::render()
     }
 
     // Render persistent Footer (rows termH - 2 .. termH - 1)
-    m_footerView.render(m_canvas, m_statusMsg);
+    m_footerView.render(m_canvas, currentStatusMessage);
 
     // Render Connection modal overlay if open
     if (m_connectionModal.isOpen()) {

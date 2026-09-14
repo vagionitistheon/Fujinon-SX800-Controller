@@ -17,8 +17,8 @@ class HeaderView {
 public:
     HeaderView() = default;
 
-    void render(Canvas& canvas, const FujinonSX800::CameraStatus& status, bool isConnected, bool isMock,
-        const std::string& connInfo, int activeTab);
+    void render(Canvas& canvas, const FujinonSX800::CameraStatus& status, bool isConnected, bool isReconnecting,
+        bool isMock, const std::string& connInfo, int activeTab);
 };
 
 } // namespace FujinonSX800Tui

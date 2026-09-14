@@ -51,6 +51,7 @@ private:
     void handleInput(const KeyEvent& ev);
     void render();
     void setupCameraCallbacks();
+    void setStatusMessage(std::string message);
 
     Terminal m_terminal {};
     Canvas m_canvas {};
@@ -61,6 +62,7 @@ private:
 
     bool m_running { false };
     bool m_isMock { false };
+    bool m_reconnecting { false };
     std::string m_connInfo {};
     std::string m_statusMsg { "TUI initialized" };
 
