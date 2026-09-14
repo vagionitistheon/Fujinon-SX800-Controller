@@ -5,6 +5,7 @@
 #include "MockCameraDevice.h"
 #include "SerialTransport.h"
 #include "TcpTransport.h"
+#include "UdpTransport.h"
 
 #include <QDir>
 #include <QStyle>
@@ -31,6 +32,7 @@ void ConnectionWidget::setupUi()
     cmbMode->addItem(tr("Mock Simulator (Offline)"), 0);
     cmbMode->addItem(tr("Serial Port (RS-485)"), 1);
     cmbMode->addItem(tr("TCP Socket Bridge"), 2);
+    cmbMode->addItem(tr("UDP Socket Bridge"), 3);
 
     mainLayout->addWidget(lblMode);
     mainLayout->addWidget(cmbMode);
@@ -94,6 +96,35 @@ void ConnectionWidget::setupUi()
     tcpLayout->addWidget(lblTcpPort);
     tcpLayout->addWidget(spinTcpPort);
     stackedConfig->addWidget(pageTcp);
+
+    // Page 3: UDP
+    pageUdp = new QWidget(this);
+    auto* udpLayout = new QHBoxLayout(pageUdp);
+    udpLayout->setContentsMargins(0, 0, 0, 0);
+    udpLayout->setSpacing(6);
+
+    auto* lblUdpHost = new QLabel(tr("Host:"), pageUdp);
+    editUdpHost = new QLineEdit("10.10.10.64", pageUdp);
+    editUdpHost->setFixedWidth(110);
+
+    auto* lblUdpPort = new QLabel(tr("Port:"), pageUdp);
+    spinUdpPort = new QSpinBox(pageUdp);
+    spinUdpPort->setRange(1, 65535);
+    spinUdpPort->setValue(46006);
+
+    auto* lblUdpLocalPort = new QLabel(tr("Local:"), pageUdp);
+    spinUdpLocalPort = new QSpinBox(pageUdp);
+    spinUdpLocalPort->setRange(0, 65535);
+    spinUdpLocalPort->setValue(0);
+    spinUdpLocalPort->setToolTip(tr("Optional local UDP bind port; 0 selects an ephemeral port"));
+
+    udpLayout->addWidget(lblUdpHost);
+    udpLayout->addWidget(editUdpHost);
+    udpLayout->addWidget(lblUdpPort);
+    udpLayout->addWidget(spinUdpPort);
+    udpLayout->addWidget(lblUdpLocalPort);
+    udpLayout->addWidget(spinUdpLocalPort);
+    stackedConfig->addWidget(pageUdp);
 
     mainLayout->addWidget(stackedConfig);
 
@@ -198,6 +229,11 @@ void ConnectionWidget::handleConnectClicked()
         const QString host = editTcpHost->text();
         const auto port = static_cast<quint16>(spinTcpPort->value());
         transport = std::make_shared<FujinonSX800::TcpTransport>(host.toStdString(), static_cast<std::uint16_t>(port));
+    } else if (mode == 3) {
+        const QString host = editUdpHost->text();
+        const auto port = static_cast<std::uint16_t>(spinUdpPort->value());
+        const auto localPort = static_cast<std::uint16_t>(spinUdpLocalPort->value());
+        transport = std::make_shared<FujinonSX800::UdpTransport>(host.toStdString(), port, localPort);
     }
 
     if (transport) {

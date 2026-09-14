@@ -55,6 +55,17 @@ void ConnectionModal::setDefaults(ConnectionType type, const std::string& info, 
             m_tcpHost = info.substr(0, colonPos);
             m_tcpPort = info.substr(colonPos + 1);
         }
+    } else if (type == ConnectionType::Udp && !info.empty()) {
+        const auto localMarker = info.find(" (local ");
+        const std::string endpoint = (localMarker == std::string::npos) ? info : info.substr(0, localMarker);
+        if (localMarker != std::string::npos && info.back() == ')') {
+            m_udpLocalPort = info.substr(localMarker + 8, info.size() - localMarker - 9);
+        }
+        const auto colonPos = endpoint.find(':');
+        if (colonPos != std::string::npos) {
+            m_udpHost = endpoint.substr(0, colonPos);
+            m_udpPort = endpoint.substr(colonPos + 1);
+        }
     }
 }
 
@@ -65,6 +76,8 @@ int ConnectionModal::maxFields() const noexcept
         return 6; // 0: Type, 1: Port, 2: Baud, 3: Address, 4: Connect, 5: Cancel
     case ConnectionType::Tcp:
         return 6; // 0: Type, 1: Host, 2: Port, 3: Address, 4: Connect, 5: Cancel
+    case ConnectionType::Udp:
+        return 7; // 0: Type, 1: Host, 2: Port, 3: Local port, 4: Address, 5: Connect, 6: Cancel
     case ConnectionType::Mock:
         return 4; // 0: Type, 1: Address, 2: Connect, 3: Cancel
     }
@@ -83,12 +96,16 @@ void ConnectionModal::submit()
 
     if (m_type == ConnectionType::Serial) {
         const std::uint32_t baud = kBaudRates[std::min(m_baudIndex, kBaudRates.size() - 1)];
-        m_onConnect(m_type, m_serialPort, baud, address);
+        m_onConnect(m_type, m_serialPort, baud, 0U, address);
     } else if (m_type == ConnectionType::Tcp) {
         const auto portVal = static_cast<std::uint32_t>(std::strtoul(m_tcpPort.c_str(), nullptr, 10));
-        m_onConnect(m_type, m_tcpHost, (portVal == 0U) ? 5000U : portVal, address);
+        m_onConnect(m_type, m_tcpHost, (portVal == 0U) ? 5000U : portVal, 0U, address);
+    } else if (m_type == ConnectionType::Udp) {
+        const auto portVal = static_cast<std::uint32_t>(std::strtoul(m_udpPort.c_str(), nullptr, 10));
+        const auto localPortVal = static_cast<std::uint32_t>(std::strtoul(m_udpLocalPort.c_str(), nullptr, 10));
+        m_onConnect(m_type, m_udpHost, (portVal == 0U) ? 5000U : portVal, localPortVal, address);
     } else {
-        m_onConnect(m_type, "Mock Device", 0U, address);
+        m_onConnect(m_type, "Mock Device", 0U, 0U, address);
     }
 
     close();
@@ -119,6 +136,11 @@ void ConnectionModal::handleInput(const KeyEvent& ev)
         return;
     }
     if (ev.key == Key::Char && ev.ch == '3') {
+        m_type = ConnectionType::Udp;
+        m_activeField = std::min(m_activeField, maxFields() - 1);
+        return;
+    }
+    if (ev.key == Key::Char && ev.ch == '4') {
         m_type = ConnectionType::Mock;
         m_activeField = std::min(m_activeField, maxFields() - 1);
         return;
@@ -150,13 +172,13 @@ void ConnectionModal::handleInput(const KeyEvent& ev)
         // Switch connection type
         int currentType = static_cast<int>(m_type);
         if (ev.key == Key::Left) {
-            currentType = (currentType + 2) % 3;
+            currentType = (currentType + 3) % 4;
             m_type = static_cast<ConnectionType>(currentType);
             m_activeField = 0;
             return;
         }
         if (ev.key == Key::Right || ev.key == Key::Space) {
-            currentType = (currentType + 1) % 3;
+            currentType = (currentType + 1) % 4;
             m_type = static_cast<ConnectionType>(currentType);
             m_activeField = 0;
             return;
@@ -200,6 +222,16 @@ void ConnectionModal::handleInput(const KeyEvent& ev)
         } else if (m_activeField == 3) {
             editString(m_addressStr);
         }
+    } else if (m_type == ConnectionType::Udp) {
+        if (m_activeField == 1) {
+            editString(m_udpHost);
+        } else if (m_activeField == 2) {
+            editString(m_udpPort);
+        } else if (m_activeField == 3) {
+            editString(m_udpLocalPort);
+        } else if (m_activeField == 4) {
+            editString(m_addressStr);
+        }
     } else if (m_type == ConnectionType::Mock) {
         if (m_activeField == 1) {
             editString(m_addressStr);
@@ -216,8 +248,8 @@ void ConnectionModal::render(Canvas& canvas)
     const int w = canvas.width();
     const int h = canvas.height();
 
-    const int modalW = 62;
-    const int modalH = 16;
+    const int modalW = 68;
+    const int modalH = 18;
     const int modalX = std::max(1, (w - modalW) / 2);
     const int modalY = std::max(1, (h - modalH) / 2);
 
@@ -259,7 +291,8 @@ void ConnectionModal::render(Canvas& canvas)
     const bool typeFocused = (m_activeField == 0);
     drawTypePill(modalX + 11, ConnectionType::Serial, " [1] Serial ", typeFocused && m_type == ConnectionType::Serial);
     drawTypePill(modalX + 25, ConnectionType::Tcp, " [2] TCP/IP ", typeFocused && m_type == ConnectionType::Tcp);
-    drawTypePill(modalX + 39, ConnectionType::Mock, " [3] Mock ", typeFocused && m_type == ConnectionType::Mock);
+    drawTypePill(modalX + 39, ConnectionType::Udp, " [3] UDP/IP ", typeFocused && m_type == ConnectionType::Udp);
+    drawTypePill(modalX + 53, ConnectionType::Mock, " [4] Mock ", typeFocused && m_type == ConnectionType::Mock);
 
     // Divider
     Style divStyle {};
@@ -299,6 +332,11 @@ void ConnectionModal::render(Canvas& canvas)
         drawField(modalY + 5, "Target Host/IP:", m_tcpHost, m_activeField == 1);
         drawField(modalY + 7, "TCP Port:      ", m_tcpPort, m_activeField == 2);
         drawField(modalY + 9, "Camera RS-485: ", m_addressStr, m_activeField == 3);
+    } else if (m_type == ConnectionType::Udp) {
+        drawField(modalY + 5, "Target Host/IP:", m_udpHost, m_activeField == 1);
+        drawField(modalY + 7, "UDP Port:      ", m_udpPort, m_activeField == 2);
+        drawField(modalY + 9, "Local UDP Port:", m_udpLocalPort, m_activeField == 3);
+        drawField(modalY + 11, "Camera RS-485: ", m_addressStr, m_activeField == 4);
     } else {
         drawField(modalY + 5, "Camera RS-485: ", m_addressStr, m_activeField == 1);
 
@@ -314,7 +352,7 @@ void ConnectionModal::render(Canvas& canvas)
     const int connectIdx = total - 2;
     const int cancelIdx = total - 1;
 
-    const int btnRow = modalY + 12;
+    const int btnRow = modalY + 14;
 
     Style connBtnStyle {};
     connBtnStyle.bg = (m_activeField == connectIdx) ? Palette::AccentGreen : Palette::DarkBg;
@@ -332,7 +370,7 @@ void ConnectionModal::render(Canvas& canvas)
     Style hintStyle {};
     hintStyle.bg = Palette::PanelBg;
     hintStyle.fg = Palette::TextMuted;
-    canvas.drawString(modalX + 5, modalY + 14, "[Tab/Arrows] Navigate │ [Enter] Connect │ [Esc] Cancel", hintStyle);
+    canvas.drawString(modalX + 5, modalY + 16, "[Tab/Arrows] Navigate │ [Enter] Connect │ [Esc] Cancel", hintStyle);
 }
 
 } // namespace FujinonSX800Tui

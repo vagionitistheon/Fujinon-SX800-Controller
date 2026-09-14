@@ -43,6 +43,8 @@ public:
     [[nodiscard]] bool initMock(std::uint8_t address = 1U);
     [[nodiscard]] bool initSerial(const std::string& port, std::uint32_t baud, std::uint8_t address = 1U);
     [[nodiscard]] bool initTcp(const std::string& host, std::uint16_t port, std::uint8_t address = 1U);
+    [[nodiscard]] bool initUdp(
+        const std::string& host, std::uint16_t port, std::uint16_t localPort, std::uint8_t address = 1U);
 
     int run();
     void stop();
@@ -62,6 +64,7 @@ private:
 
     bool m_running { false };
     bool m_isMock { false };
+    bool m_isUdp { false };
     bool m_reconnecting { false };
     std::string m_connInfo {};
     std::string m_statusMsg { "TUI initialized" };
@@ -82,8 +85,8 @@ private:
     FooterView m_footerView {};
     ConnectionModal m_connectionModal {};
 
-    void switchConnection(
-        ConnectionType type, const std::string& endpoint, std::uint32_t baudOrPort, std::uint8_t address);
+    void switchConnection(ConnectionType type, const std::string& endpoint, std::uint32_t port, std::uint32_t localPort,
+        std::uint8_t address);
 };
 
 } // namespace FujinonSX800Tui

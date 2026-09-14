@@ -50,6 +50,7 @@ Cross-platform C++17 controller and Qt 6 GUI application for the **Fujinon SX800
 - **Cross-Platform Transports**:
   - **Serial/RS-485**: POSIX `termios` on Linux, Win32 Communications API on Windows (`CreateFileA`, `SetCommState`, `SetCommTimeouts`).
   - **TCP Sockets**: POSIX BSD sockets on Linux, Winsock2 (`WSAStartup`) on Windows with non-blocking connect timeouts.
+  - **UDP Sockets**: Connected UDP datagrams with optional local-port binding for IP bridges.
 - **Hardware-Free Testing**:
   - Includes `MockCameraDevice` simulating Fujinon SX800 register responses and state transitions for offline testing and CI.
 
@@ -111,8 +112,14 @@ Launch the built executable from the build directory:
 1. **Connection**:
    - **Serial Mode**: Select `/dev/ttyUSB*` (Linux) or `COM*` (Windows) and set baud rate (default: `9600` or `115200`).
    - **TCP Mode**: Enter camera IP (default: `192.168.0.10`) and port (`4001`).
+  - **UDP Mode**: Enter camera IP, remote port, and optional local bind port (`0` selects an ephemeral port).
 2. **Offline Simulation**:
    - Pass an in-memory `MockCameraDevice` transport programmatically to test the full GUI without physical hardware.
+
+The TUI accepts UDP connections with `--udp <host> <port> [local-port]`. UDP
+connection state confirms local socket setup only; it does not prove that the
+camera is reachable. Telemetry polling and query timeouts remain the source of
+camera-level liveness information.
 
 ---
 

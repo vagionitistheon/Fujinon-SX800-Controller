@@ -1,6 +1,7 @@
 #include "TuiApp.h"
 #include "FujinonSX800Core/SerialTransport.h"
 #include "FujinonSX800Core/TcpTransport.h"
+#include "FujinonSX800Core/UdpTransport.h"
 
 #include <chrono>
 #include <thread>
@@ -10,9 +11,8 @@ namespace FujinonSX800Tui {
 TuiApp::TuiApp()
 {
     m_connectionModal.setOnConnect(
-        [this](ConnectionType type, const std::string& endpoint, std::uint32_t baudOrPort, std::uint8_t address) {
-            switchConnection(type, endpoint, baudOrPort, address);
-        });
+        [this](ConnectionType type, const std::string& endpoint, std::uint32_t port, std::uint32_t localPort,
+            std::uint8_t address) { switchConnection(type, endpoint, port, localPort, address); });
 }
 
 TuiApp::~TuiApp()
@@ -82,6 +82,7 @@ bool TuiApp::initMock(std::uint8_t address)
     }
 
     m_isMock = true;
+    m_isUdp = false;
     m_connInfo = "Virtual Simulator";
     setStatusMessage("Connected to Mock SX800 Camera");
     return true;
@@ -102,6 +103,7 @@ bool TuiApp::initSerial(const std::string& port, std::uint32_t baud, std::uint8_
     }
 
     m_isMock = false;
+    m_isUdp = false;
     m_connInfo = port + " @" + std::to_string(baud);
     setStatusMessage("Connected via Serial (" + port + ")");
     return true;
@@ -122,8 +124,33 @@ bool TuiApp::initTcp(const std::string& host, std::uint16_t port, std::uint8_t a
     }
 
     m_isMock = false;
+    m_isUdp = false;
     m_connInfo = host + ":" + std::to_string(port);
     setStatusMessage("Connected via TCP (" + m_connInfo + ")");
+    return true;
+}
+
+bool TuiApp::initUdp(const std::string& host, std::uint16_t port, std::uint16_t localPort, std::uint8_t address)
+{
+    m_transport = std::make_shared<FujinonSX800::UdpTransport>(host, port, localPort);
+    m_camera = std::make_unique<FujinonSX800::FujinonCamera>(m_transport, address);
+
+    setupCameraCallbacks();
+    m_camera->setAutoReconnect(true);
+    m_camera->setAutoQueryOnConnect(true);
+    m_camera->setTelemetryPolling(true, 500U);
+
+    if (!m_camera->start()) {
+        return false;
+    }
+
+    m_isMock = false;
+    m_isUdp = true;
+    m_connInfo = host + ":" + std::to_string(port);
+    if (localPort != 0U) {
+        m_connInfo += " (local " + std::to_string(localPort) + ")";
+    }
+    setStatusMessage("Connected via UDP (" + m_connInfo + ")");
     return true;
 }
 
@@ -138,7 +165,7 @@ void TuiApp::stop()
 }
 
 void TuiApp::switchConnection(
-    ConnectionType type, const std::string& endpoint, std::uint32_t baudOrPort, std::uint8_t address)
+    ConnectionType type, const std::string& endpoint, std::uint32_t port, std::uint32_t localPort, std::uint8_t address)
 {
     if (m_camera) {
         m_camera->stop();
@@ -150,10 +177,13 @@ void TuiApp::switchConnection(
     bool ok = false;
     switch (type) {
     case ConnectionType::Serial:
-        ok = initSerial(endpoint, baudOrPort, address);
+        ok = initSerial(endpoint, port, address);
         break;
     case ConnectionType::Tcp:
-        ok = initTcp(endpoint, static_cast<std::uint16_t>(baudOrPort), address);
+        ok = initTcp(endpoint, static_cast<std::uint16_t>(port), address);
+        break;
+    case ConnectionType::Udp:
+        ok = initUdp(endpoint, static_cast<std::uint16_t>(port), static_cast<std::uint16_t>(localPort), address);
         break;
     case ConnectionType::Mock:
         ok = initMock(address);
@@ -199,6 +229,7 @@ void TuiApp::handleInput(const KeyEvent& ev)
     // Connection Modal trigger [C]
     if (ev.isChar('c') || ev.isChar('C')) {
         const auto connType = m_isMock                    ? ConnectionType::Mock
+            : m_isUdp                                     ? ConnectionType::Udp
             : (m_connInfo.find(':') != std::string::npos) ? ConnectionType::Tcp
                                                           : ConnectionType::Serial;
         m_connectionModal.setDefaults(connType, m_connInfo, m_status.rs485Address ? m_status.rs485Address : 7U);

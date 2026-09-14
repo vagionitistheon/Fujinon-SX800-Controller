@@ -20,6 +20,7 @@ void printUsage(const char* progName)
               << "  -m, --mock                    Launch immediately using internal Mock SX800 Camera (default)\n"
               << "  -s, --serial <port> [baud]    Connect via Serial/RS-485 port (e.g. /dev/ttyUSB0 9600)\n"
               << "  -t, --tcp <host> <port>       Connect via TCP/IP socket bridge (e.g. 192.168.1.100 5000)\n"
+              << "  -u, --udp <host> <port> [local] Connect via UDP socket bridge\n"
               << "  -a, --address <addr>          Target RS-485 device address [1-255] (default: 7)\n"
               << "  -h, --help                    Display this help message and exit\n\n"
               << "Interactive Keybindings:\n"
@@ -33,7 +34,7 @@ void printUsage(const char* progName)
               << "  [D]                           Toggle Day / Night mode\n"
               << "  [I]                           Toggle Auto Iris\n"
               << "  [R]                           Query all camera status registers\n"
-              << "  [C]                           Open Connection Manager (Serial / TCP / Mock)\n"
+              << "  [C]                           Open Connection Manager (Serial / TCP / UDP / Mock)\n"
               << "  [K]                           Clear traffic sniffer log\n"
               << "  [M]                           Switch / reconnect to internal mock simulation\n"
               << "  [Q]                           Quit application and restore terminal\n\n";
@@ -48,6 +49,9 @@ int main(int argc, char* argv[])
     std::uint32_t baudRate { 9600U };
     std::string tcpHost {};
     std::uint16_t tcpPort { 0U };
+    std::string udpHost {};
+    std::uint16_t udpPort { 0U };
+    std::uint16_t udpLocalPort { 0U };
     std::uint8_t address { 7U };
 
     for (int i = 1; i < argc; ++i) {
@@ -69,6 +73,13 @@ int main(int argc, char* argv[])
             useMock = false;
             tcpHost = argv[++i];
             tcpPort = static_cast<std::uint16_t>(std::strtoul(argv[++i], nullptr, 10));
+        } else if ((arg == "-u" || arg == "--udp") && i + 2 < argc) {
+            useMock = false;
+            udpHost = argv[++i];
+            udpPort = static_cast<std::uint16_t>(std::strtoul(argv[++i], nullptr, 10));
+            if (i + 1 < argc && argv[i + 1][0] != '-') {
+                udpLocalPort = static_cast<std::uint16_t>(std::strtoul(argv[++i], nullptr, 10));
+            }
         } else if ((arg == "-a" || arg == "--address") && i + 1 < argc) {
             address = static_cast<std::uint8_t>(std::strtoul(argv[++i], nullptr, 10));
         } else {
@@ -80,7 +91,7 @@ int main(int argc, char* argv[])
 
     FujinonSX800Tui::TuiApp app {};
 
-    if (useMock && serialPort.empty() && tcpHost.empty()) {
+    if (useMock && serialPort.empty() && tcpHost.empty() && udpHost.empty()) {
         if (!app.initMock(address)) {
             std::cerr << "Failed to initialize virtual mock camera\n";
             return 1;
@@ -93,6 +104,11 @@ int main(int argc, char* argv[])
     } else if (!tcpHost.empty()) {
         if (!app.initTcp(tcpHost, tcpPort, address)) {
             std::cerr << "Failed to initialize TCP connection to " << tcpHost << ":" << tcpPort << "\n";
+            return 1;
+        }
+    } else if (!udpHost.empty()) {
+        if (!app.initUdp(udpHost, udpPort, udpLocalPort, address)) {
+            std::cerr << "Failed to initialize UDP connection to " << udpHost << ":" << udpPort << "\n";
             return 1;
         }
     } else {
