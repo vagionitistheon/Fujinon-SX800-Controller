@@ -3,6 +3,7 @@
 /// @file CameraStatus.h
 /// @brief Telemetry and state representation of the Fujinon SX800 camera.
 
+#include "ITransport.h"
 #include "PelcoDTypes.h"
 
 #include <chrono>
@@ -128,6 +129,8 @@ struct CameraStatus {
 
     // ---------- State Tracking ----------
     bool isConnected { false };
+    TransportState transportState { TransportState::Disconnected };
+    std::string transportError {};
     std::chrono::steady_clock::time_point lastUpdateTime {};
 };
 

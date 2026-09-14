@@ -72,6 +72,8 @@ void MainWindow::setupConnections()
     connect(camera, &FujinonSX800Qt::QFujinonCamera::statusUpdated, systemTab, &SystemTab::updateTelemetry);
     connect(camera, &FujinonSX800Qt::QFujinonCamera::connectionStateChanged, connectionWidget,
         &ConnectionWidget::setConnectionState);
+    connect(camera, &FujinonSX800Qt::QFujinonCamera::transportStateChanged, connectionWidget,
+        &ConnectionWidget::setTransportState);
     connect(camera, &FujinonSX800Qt::QFujinonCamera::transportStateChanged, this,
         [this](FujinonSX800::TransportState state, const QString& message) {
             if (state == FujinonSX800::TransportState::Error) {
@@ -107,13 +109,19 @@ void MainWindow::handleConnect(std::shared_ptr<FujinonSX800::ITransport> transpo
 
 void MainWindow::handleDisconnect()
 {
-    camera->stop();
+    camera->disconnectCamera();
     connectionWidget->setConnectionState(false);
     statusBar()->showMessage(tr("Disconnected."));
 }
 
 void MainWindow::handleStatusUpdated(const FujinonSX800::CameraStatus& status)
 {
+    if (!status.isConnected) {
+        const QString detail = QString::fromStdString(status.transportError);
+        statusBar()->showMessage(detail.isEmpty() ? tr("Offline") : tr("Offline: %1").arg(detail));
+        return;
+    }
+
     const QString msg = tr("Online | Zoom: %1 mm (FOV %2°) | Focus: %3 m | Color Temp: %4 K")
                             .arg(status.focalLengthMm, 0, 'f', 1)
                             .arg(status.horizontalFovDeg, 0, 'f', 1)

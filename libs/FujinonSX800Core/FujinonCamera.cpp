@@ -41,6 +41,8 @@ bool FujinonCamera::start()
     {
         std::lock_guard<std::mutex> lock(m_statusMutex);
         m_status.isConnected = true;
+        m_status.transportState = TransportState::Connected;
+        m_status.transportError.clear();
     }
 
     LOG(INFO) << "Starting FujinonCamera controller (address: " << static_cast<int>(m_address.load()) << ")";
@@ -100,6 +102,8 @@ void FujinonCamera::stop()
     {
         std::lock_guard<std::mutex> lock(m_statusMutex);
         m_status.isConnected = false;
+        m_status.transportState = TransportState::Disconnected;
+        m_status.transportError.clear();
     }
 }
 
@@ -403,6 +407,8 @@ void FujinonCamera::onTransportStateChanged(TransportState state, const std::str
     {
         std::lock_guard<std::mutex> lock(m_statusMutex);
         m_status.isConnected = connected;
+        m_status.transportState = state;
+        m_status.transportError = errorMsg;
         status = m_status;
     }
 

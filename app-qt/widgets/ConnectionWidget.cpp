@@ -243,7 +243,13 @@ void ConnectionWidget::handleConnectClicked()
 
 void ConnectionWidget::setConnectionState(bool connected)
 {
+    if (!connected && isReconnecting) {
+        isConnected = false;
+        return;
+    }
+
     isConnected = connected;
+    isReconnecting = false;
     updateLedState(connected);
 
     if (connected) {
@@ -261,6 +267,59 @@ void ConnectionWidget::setConnectionState(bool connected)
     }
 
     // Refresh styling
+    btnConnect->style()->unpolish(btnConnect);
+    btnConnect->style()->polish(btnConnect);
+}
+
+void ConnectionWidget::setTransportState(FujinonSX800::TransportState state, const QString& message)
+{
+    const bool wasConnected = isConnected;
+    switch (state) {
+    case FujinonSX800::TransportState::Connecting:
+        isConnected = false;
+        isReconnecting = wasConnected;
+        updateLedState(false);
+        lblLed->setStyleSheet("background-color: #d29922; border-radius: 6px; border: 1px solid #e3b341;");
+        lblStatusText->setText(isReconnecting ? tr("Reconnecting...") : tr("Connecting..."));
+        lblStatusText->setStyleSheet("color: #d29922; font-weight: bold;");
+        btnConnect->setText(isReconnecting ? tr("Cancel") : tr("Connecting..."));
+        cmbMode->setEnabled(false);
+        spinAddress->setEnabled(false);
+        stackedConfig->setEnabled(false);
+        break;
+    case FujinonSX800::TransportState::Connected:
+        setConnectionState(true);
+        break;
+    case FujinonSX800::TransportState::Error:
+        isConnected = false;
+        isReconnecting = wasConnected;
+        updateLedState(false);
+        lblLed->setStyleSheet("background-color: #f85149; border-radius: 6px; border: 1px solid #da3633;");
+        lblStatusText->setText(message.isEmpty() ? tr("Transport error") : tr("Error: %1").arg(message));
+        lblStatusText->setStyleSheet("color: #f85149; font-weight: bold;");
+        if (!isReconnecting) {
+            btnConnect->setText(tr("Connect"));
+            cmbMode->setEnabled(true);
+            spinAddress->setEnabled(true);
+            stackedConfig->setEnabled(true);
+        }
+        break;
+    case FujinonSX800::TransportState::Disconnected:
+        isConnected = false;
+        isReconnecting = wasConnected;
+        updateLedState(false);
+        if (isReconnecting) {
+            lblLed->setStyleSheet("background-color: #d29922; border-radius: 6px; border: 1px solid #e3b341;");
+            lblStatusText->setText(tr("Reconnecting..."));
+            lblStatusText->setStyleSheet("color: #d29922; font-weight: bold;");
+            btnConnect->setText(tr("Cancel"));
+            cmbMode->setEnabled(false);
+            spinAddress->setEnabled(false);
+            stackedConfig->setEnabled(false);
+        }
+        break;
+    }
+
     btnConnect->style()->unpolish(btnConnect);
     btnConnect->style()->polish(btnConnect);
 }

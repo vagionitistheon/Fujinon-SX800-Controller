@@ -102,10 +102,14 @@ void testStatePropagation()
     SX800_TEST_ASSERT(camera.start());
     SX800_TEST_ASSERT(lastState.load() == FujinonSX800::TransportState::Connected);
     SX800_TEST_ASSERT(camera.getStatus().isConnected);
+    SX800_TEST_ASSERT(camera.getStatus().transportState == FujinonSX800::TransportState::Connected);
+    SX800_TEST_ASSERT(camera.getStatus().transportError.empty());
 
     transport->emitState(FujinonSX800::TransportState::Error, "link failure");
     SX800_TEST_ASSERT(lastState.load() == FujinonSX800::TransportState::Error);
     SX800_TEST_ASSERT(!camera.getStatus().isConnected);
+    SX800_TEST_ASSERT(camera.getStatus().transportState == FujinonSX800::TransportState::Error);
+    SX800_TEST_ASSERT(camera.getStatus().transportError == "link failure");
 
     camera.stop();
 }

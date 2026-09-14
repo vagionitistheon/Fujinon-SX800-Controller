@@ -33,6 +33,7 @@ signals:
 
 public slots:
     void setConnectionState(bool connected);
+    void setTransportState(FujinonSX800::TransportState state, const QString& message);
     void refreshSerialPorts();
 
 private slots:
@@ -73,6 +74,7 @@ private:
     QLabel* lblStatusText { nullptr };
 
     bool isConnected { false };
+    bool isReconnecting { false };
 };
 
 } // namespace FujinonSX800App
