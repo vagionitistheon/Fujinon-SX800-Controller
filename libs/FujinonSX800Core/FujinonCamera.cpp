@@ -49,7 +49,8 @@ bool FujinonCamera::start()
     m_running = true;
     m_rxThread = std::thread(&FujinonCamera::rxLoop, this);
     m_workerThread = std::thread(&FujinonCamera::workerLoop, this);
-    if (m_telemetryPolling) {
+    if (m_telemetryPolling.load()) {
+        std::lock_guard<std::mutex> lock(m_pollThreadMutex);
         m_pollThread = std::thread(&FujinonCamera::pollingLoop, this);
     }
 
@@ -76,8 +77,11 @@ void FujinonCamera::stop()
     if (m_workerThread.joinable()) {
         m_workerThread.join();
     }
-    if (m_pollThread.joinable()) {
-        m_pollThread.join();
+    {
+        std::lock_guard<std::mutex> lock(m_pollThreadMutex);
+        if (m_pollThread.joinable()) {
+            m_pollThread.join();
+        }
     }
     if (m_reconnectThread.joinable()) {
         m_reconnectThread.join();
@@ -153,14 +157,20 @@ bool FujinonCamera::getAutoQueryOnConnect() const noexcept
 
 void FujinonCamera::setTelemetryPolling(bool enable, std::uint32_t intervalMs) noexcept
 {
-    m_telemetryPolling = enable;
-    m_pollIntervalMs = (intervalMs > 0U) ? intervalMs : 1000U;
+    m_telemetryPolling.store(enable);
+    m_pollIntervalMs.store((intervalMs > 0U) ? intervalMs : 1000U);
+    if (enable && m_running.load()) {
+        std::lock_guard<std::mutex> lock(m_pollThreadMutex);
+        if (!m_pollThread.joinable()) {
+            m_pollThread = std::thread(&FujinonCamera::pollingLoop, this);
+        }
+    }
     m_pollCv.notify_all();
 }
 
 bool FujinonCamera::getTelemetryPolling() const noexcept
 {
-    return m_telemetryPolling;
+    return m_telemetryPolling.load();
 }
 
 void FujinonCamera::setQueryTimeoutMs(std::uint32_t timeoutMs) noexcept
@@ -306,14 +316,14 @@ void FujinonCamera::pollingLoop()
     while (m_running) {
         {
             std::unique_lock<std::mutex> lock(m_pollMutex);
-            m_pollCv.wait_for(lock, std::chrono::milliseconds(m_pollIntervalMs), [this] { return !m_running; });
+            m_pollCv.wait_for(lock, std::chrono::milliseconds(m_pollIntervalMs.load()), [this] { return !m_running; });
         }
 
         if (!m_running) {
             break;
         }
 
-        if (!m_telemetryPolling) {
+        if (!m_telemetryPolling.load()) {
             continue;
         }
 

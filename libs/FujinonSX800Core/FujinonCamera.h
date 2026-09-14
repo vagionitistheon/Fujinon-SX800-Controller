@@ -172,11 +172,12 @@ private:
     std::atomic<std::uint64_t> m_rxOverflowDrops { 0U };
 
     bool m_autoQueryOnConnect { false };
-    bool m_telemetryPolling { false };
-    std::uint32_t m_pollIntervalMs { 1000U };
+    std::atomic<bool> m_telemetryPolling { false };
+    std::atomic<std::uint32_t> m_pollIntervalMs { 1000U };
     std::uint32_t m_queryTimeoutMs { 1000U };
     std::mutex m_pollMutex;
     std::condition_variable m_pollCv;
+    std::mutex m_pollThreadMutex;
 
     std::atomic<bool> m_autoReconnect { false };
     std::atomic<bool> m_reconnectActive { false };
