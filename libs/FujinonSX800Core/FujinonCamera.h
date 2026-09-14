@@ -179,7 +179,7 @@ private:
     std::condition_variable m_pollCv;
     std::mutex m_pollThreadMutex;
 
-    std::atomic<bool> m_autoReconnect { false };
+    std::atomic<bool> m_autoReconnect { true };
     std::atomic<bool> m_reconnectActive { false };
     std::mutex m_reconnectMutex;
     std::condition_variable m_reconnectCv;

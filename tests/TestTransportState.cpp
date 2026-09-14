@@ -118,7 +118,7 @@ void testAutoReconnect()
 {
     auto transport = std::make_shared<StateTransport>();
     FujinonSX800::FujinonCamera camera(transport, 0x07U);
-    camera.setAutoReconnect(true);
+    SX800_TEST_ASSERT(camera.getAutoReconnect());
 
     SX800_TEST_ASSERT(camera.start());
     transport->failNextOpens(1U);

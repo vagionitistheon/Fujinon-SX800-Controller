@@ -174,7 +174,7 @@ private:
     std::shared_ptr<FujinonSX800::ITransport> m_transport;
     std::unique_ptr<FujinonSX800::FujinonCamera> m_camera;
     std::uint8_t m_address { 1U };
-    bool m_autoReconnect { false };
+    bool m_autoReconnect { true };
 };
 
 } // namespace FujinonSX800Qt
