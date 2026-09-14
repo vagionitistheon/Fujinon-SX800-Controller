@@ -153,7 +153,7 @@ private:
 
     std::shared_ptr<ITransport> m_transport;
     ProtocolBuilder m_builder;
-    std::uint8_t m_address { 1U };
+    std::atomic<std::uint8_t> m_address { 1U };
 
     std::atomic<bool> m_running { false };
     std::atomic<bool> m_connected { false };
@@ -171,10 +171,10 @@ private:
     std::condition_variable m_rxCv;
     std::atomic<std::uint64_t> m_rxOverflowDrops { 0U };
 
-    bool m_autoQueryOnConnect { false };
+    std::atomic<bool> m_autoQueryOnConnect { false };
     std::atomic<bool> m_telemetryPolling { false };
     std::atomic<std::uint32_t> m_pollIntervalMs { 1000U };
-    std::uint32_t m_queryTimeoutMs { 1000U };
+    std::atomic<std::uint32_t> m_queryTimeoutMs { 1000U };
     std::mutex m_pollMutex;
     std::condition_variable m_pollCv;
     std::mutex m_pollThreadMutex;

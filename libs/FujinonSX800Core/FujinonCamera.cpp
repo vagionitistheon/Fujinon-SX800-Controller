@@ -43,7 +43,7 @@ bool FujinonCamera::start()
         m_status.isConnected = true;
     }
 
-    LOG(INFO) << "Starting FujinonCamera controller (address: " << static_cast<int>(m_address) << ")";
+    LOG(INFO) << "Starting FujinonCamera controller (address: " << static_cast<int>(m_address.load()) << ")";
 
     m_rxRing.clear();
     m_running = true;
@@ -54,7 +54,7 @@ bool FujinonCamera::start()
         m_pollThread = std::thread(&FujinonCamera::pollingLoop, this);
     }
 
-    if (m_autoQueryOnConnect) {
+    if (m_autoQueryOnConnect.load()) {
         queryAll();
     }
 
@@ -110,7 +110,7 @@ bool FujinonCamera::isConnected() const noexcept
 
 void FujinonCamera::setAddress(std::uint8_t address)
 {
-    m_address = address;
+    m_address.store(address);
     m_builder.setAddress(address);
     std::lock_guard<std::mutex> lock(m_statusMutex);
     m_status.rs485Address = address;
@@ -118,7 +118,7 @@ void FujinonCamera::setAddress(std::uint8_t address)
 
 std::uint8_t FujinonCamera::getAddress() const noexcept
 {
-    return m_address;
+    return m_address.load();
 }
 
 void FujinonCamera::addStatusCallback(StatusCallback cb)
@@ -147,12 +147,12 @@ void FujinonCamera::addTransportStateCallback(TransportStateCallback cb)
 
 void FujinonCamera::setAutoQueryOnConnect(bool enable) noexcept
 {
-    m_autoQueryOnConnect = enable;
+    m_autoQueryOnConnect.store(enable);
 }
 
 bool FujinonCamera::getAutoQueryOnConnect() const noexcept
 {
-    return m_autoQueryOnConnect;
+    return m_autoQueryOnConnect.load();
 }
 
 void FujinonCamera::setTelemetryPolling(bool enable, std::uint32_t intervalMs) noexcept
@@ -175,12 +175,12 @@ bool FujinonCamera::getTelemetryPolling() const noexcept
 
 void FujinonCamera::setQueryTimeoutMs(std::uint32_t timeoutMs) noexcept
 {
-    m_queryTimeoutMs = (timeoutMs > 0U) ? timeoutMs : 1000U;
+    m_queryTimeoutMs.store((timeoutMs > 0U) ? timeoutMs : 1000U);
 }
 
 std::uint32_t FujinonCamera::getQueryTimeoutMs() const noexcept
 {
-    return m_queryTimeoutMs;
+    return m_queryTimeoutMs.load();
 }
 
 void FujinonCamera::setAutoReconnect(bool enable) noexcept
@@ -204,7 +204,8 @@ void FujinonCamera::checkQueryTimeout()
 
     const auto now = std::chrono::steady_clock::now();
     const auto elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(now - m_querySentTime).count();
-    if (elapsed >= static_cast<long long>(m_queryTimeoutMs)) {
+    const auto queryTimeoutMs = m_queryTimeoutMs.load();
+    if (elapsed >= static_cast<long long>(queryTimeoutMs)) {
         m_awaitingResponse = false;
         m_responseCv.notify_all();
         m_rxCv.notify_one();
@@ -214,7 +215,7 @@ void FujinonCamera::checkQueryTimeout()
             tag = m_pendingQueryTag;
         }
 
-        LOG(WARNING) << "Query timeout: No response received for query '" << tag << "' within " << m_queryTimeoutMs
+        LOG(WARNING) << "Query timeout: No response received for query '" << tag << "' within " << queryTimeoutMs
                      << " ms";
 
         std::vector<TimeoutCallback> cbs;
@@ -299,7 +300,7 @@ void FujinonCamera::workerLoop()
             if (!item.queryTag.empty()) {
                 {
                     std::unique_lock<std::mutex> lock(m_statusMutex);
-                    m_responseCv.wait_for(lock, std::chrono::milliseconds(m_queryTimeoutMs),
+                    m_responseCv.wait_for(lock, std::chrono::milliseconds(m_queryTimeoutMs.load()),
                         [this] { return !m_awaitingResponse.load() || !m_running; });
                 }
                 checkQueryTimeout();

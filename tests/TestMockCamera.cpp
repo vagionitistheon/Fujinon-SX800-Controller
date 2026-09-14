@@ -282,6 +282,34 @@ void testEnablePollingAfterStart()
     camera.stop();
 }
 
+void testConcurrentConfiguration()
+{
+    auto mockDevice = std::make_shared<FujinonSX800::MockCameraDevice>(0x07U);
+    FujinonSX800::FujinonCamera camera(mockDevice, 0x07U);
+    SX800_TEST_ASSERT(camera.start());
+
+    std::thread configurator([&camera] {
+        for (std::uint32_t iteration { 0U }; iteration < 100U; ++iteration) {
+            camera.setAddress(static_cast<std::uint8_t>((iteration % 2U) + 1U));
+            camera.setAutoQueryOnConnect((iteration % 2U) == 0U);
+            camera.setQueryTimeoutMs(iteration + 1U);
+            camera.setTelemetryPolling((iteration % 2U) == 0U, 5U + iteration);
+        }
+    });
+
+    std::thread commander([&camera] {
+        for (std::uint32_t iteration { 0U }; iteration < 100U; ++iteration) {
+            camera.zoomTele();
+            camera.queryTemperature();
+        }
+    });
+
+    configurator.join();
+    commander.join();
+    camera.setTelemetryPolling(false);
+    camera.stop();
+}
+
 #include <glog/logging.h>
 
 int main([[maybe_unused]] int argc, char* argv[])
@@ -294,6 +322,7 @@ int main([[maybe_unused]] int argc, char* argv[])
     testFragmentedSerialResponse();
     testRxOverflowTracking();
     testEnablePollingAfterStart();
+    testConcurrentConfiguration();
 
     std::cout << "[PASS] TestMockCamera completed successfully." << std::endl;
     google::ShutdownGoogleLogging();

@@ -6,6 +6,7 @@
 #include "PelcoDFrame.h"
 #include "PelcoDTypes.h"
 
+#include <atomic>
 #include <cstdint>
 #include <vector>
 
@@ -205,7 +206,7 @@ public:
     [[nodiscard]] std::vector<std::uint8_t> buildQuerySpeedEx(std::uint8_t target = 0x25U) const;
 
 private:
-    std::uint8_t m_address { 1U };
+    std::atomic<std::uint8_t> m_address { 1U };
 };
 
 } // namespace FujinonSX800
