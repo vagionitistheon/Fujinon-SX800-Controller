@@ -1,6 +1,7 @@
 #include "FujinonCamera.h"
 #include "ProtocolParser.h"
 
+#include <algorithm>
 #include <chrono>
 #include <glog/logging.h>
 
@@ -114,28 +115,110 @@ std::uint8_t FujinonCamera::getAddress() const noexcept
     return m_address.load();
 }
 
-void FujinonCamera::addStatusCallback(StatusCallback cb)
+namespace {
+
+    template <typename Container> bool eraseCallbackById(Container& container, FujinonCamera::CallbackId id)
+    {
+        auto it
+            = std::find_if(container.begin(), container.end(), [id](const auto& entry) { return entry.first == id; });
+        if (it != container.end()) {
+            container.erase(it);
+            return true;
+        }
+        return false;
+    }
+
+} // namespace
+
+FujinonCamera::CallbackId FujinonCamera::addStatusCallback(StatusCallback cb)
 {
+    const auto id = m_nextCallbackId.fetch_add(1U, std::memory_order_relaxed);
     std::lock_guard<std::mutex> lock(m_callbackMutex);
-    m_statusCallbacks.push_back(std::move(cb));
+    m_statusCallbacks.emplace_back(id, std::move(cb));
+    return id;
 }
 
-void FujinonCamera::addTrafficCallback(TrafficCallback cb)
+FujinonCamera::CallbackId FujinonCamera::addTrafficCallback(TrafficCallback cb)
 {
+    const auto id = m_nextCallbackId.fetch_add(1U, std::memory_order_relaxed);
     std::lock_guard<std::mutex> lock(m_callbackMutex);
-    m_trafficCallbacks.push_back(std::move(cb));
+    m_trafficCallbacks.emplace_back(id, std::move(cb));
+    return id;
 }
 
-void FujinonCamera::addTimeoutCallback(TimeoutCallback cb)
+FujinonCamera::CallbackId FujinonCamera::addTimeoutCallback(TimeoutCallback cb)
 {
+    const auto id = m_nextCallbackId.fetch_add(1U, std::memory_order_relaxed);
     std::lock_guard<std::mutex> lock(m_callbackMutex);
-    m_timeoutCallbacks.push_back(std::move(cb));
+    m_timeoutCallbacks.emplace_back(id, std::move(cb));
+    return id;
 }
 
-void FujinonCamera::addTransportStateCallback(TransportStateCallback cb)
+FujinonCamera::CallbackId FujinonCamera::addTransportStateCallback(TransportStateCallback cb)
+{
+    const auto id = m_nextCallbackId.fetch_add(1U, std::memory_order_relaxed);
+    std::lock_guard<std::mutex> lock(m_callbackMutex);
+    m_transportStateCallbacks.emplace_back(id, std::move(cb));
+    return id;
+}
+
+bool FujinonCamera::removeStatusCallback(CallbackId id)
+{
+    if (id == InvalidCallbackId) {
+        return false;
+    }
+    std::lock_guard<std::mutex> lock(m_callbackMutex);
+    return eraseCallbackById(m_statusCallbacks, id);
+}
+
+bool FujinonCamera::removeTrafficCallback(CallbackId id)
+{
+    if (id == InvalidCallbackId) {
+        return false;
+    }
+    std::lock_guard<std::mutex> lock(m_callbackMutex);
+    return eraseCallbackById(m_trafficCallbacks, id);
+}
+
+bool FujinonCamera::removeTimeoutCallback(CallbackId id)
+{
+    if (id == InvalidCallbackId) {
+        return false;
+    }
+    std::lock_guard<std::mutex> lock(m_callbackMutex);
+    return eraseCallbackById(m_timeoutCallbacks, id);
+}
+
+bool FujinonCamera::removeTransportStateCallback(CallbackId id)
+{
+    if (id == InvalidCallbackId) {
+        return false;
+    }
+    std::lock_guard<std::mutex> lock(m_callbackMutex);
+    return eraseCallbackById(m_transportStateCallbacks, id);
+}
+
+bool FujinonCamera::removeCallback(CallbackId id)
+{
+    if (id == InvalidCallbackId) {
+        return false;
+    }
+    std::lock_guard<std::mutex> lock(m_callbackMutex);
+    bool removed { false };
+    removed = eraseCallbackById(m_statusCallbacks, id) || removed;
+    removed = eraseCallbackById(m_trafficCallbacks, id) || removed;
+    removed = eraseCallbackById(m_timeoutCallbacks, id) || removed;
+    removed = eraseCallbackById(m_transportStateCallbacks, id) || removed;
+    return removed;
+}
+
+void FujinonCamera::clearCallbacks()
 {
     std::lock_guard<std::mutex> lock(m_callbackMutex);
-    m_transportStateCallbacks.push_back(std::move(cb));
+    m_statusCallbacks.clear();
+    m_trafficCallbacks.clear();
+    m_timeoutCallbacks.clear();
+    m_transportStateCallbacks.clear();
 }
 
 void FujinonCamera::setAutoQueryOnConnect(bool enable) noexcept
@@ -205,14 +288,14 @@ void FujinonCamera::checkQueryTimeout()
         LOG(WARNING) << "Query timeout: No response received for query '" << tag << "' within " << queryTimeoutMs
                      << " ms";
 
-        std::vector<TimeoutCallback> cbs;
+        std::vector<std::pair<CallbackId, TimeoutCallback>> cbs;
         {
             std::lock_guard<std::mutex> lock(m_callbackMutex);
             cbs = m_timeoutCallbacks;
         }
-        for (const auto& cb : cbs) {
-            if (cb) {
-                cb(tag);
+        for (const auto& entry : cbs) {
+            if (entry.second) {
+                entry.second(tag);
             }
         }
     }
@@ -324,14 +407,14 @@ void FujinonCamera::workerLoop()
             }
 
             // Notify TX callbacks
-            std::vector<TrafficCallback> tbs;
+            std::vector<std::pair<CallbackId, TrafficCallback>> tbs;
             {
                 std::lock_guard<std::mutex> lock(m_callbackMutex);
                 tbs = m_trafficCallbacks;
             }
-            for (const auto& cb : tbs) {
-                if (cb) {
-                    cb(true, item.frame);
+            for (const auto& entry : tbs) {
+                if (entry.second) {
+                    entry.second(true, item.frame);
                 }
             }
 
@@ -423,22 +506,22 @@ void FujinonCamera::onTransportStateChanged(TransportState state, const std::str
         status = m_status;
     }
 
-    std::vector<StatusCallback> statusCallbacks;
-    std::vector<TransportStateCallback> stateCallbacks;
+    std::vector<std::pair<CallbackId, StatusCallback>> statusCallbacks;
+    std::vector<std::pair<CallbackId, TransportStateCallback>> stateCallbacks;
     {
         std::lock_guard<std::mutex> lock(m_callbackMutex);
         statusCallbacks = m_statusCallbacks;
         stateCallbacks = m_transportStateCallbacks;
     }
 
-    for (const auto& callback : statusCallbacks) {
-        if (callback) {
-            callback(status);
+    for (const auto& entry : statusCallbacks) {
+        if (entry.second) {
+            entry.second(status);
         }
     }
-    for (const auto& callback : stateCallbacks) {
-        if (callback) {
-            callback(state, errorMsg);
+    for (const auto& entry : stateCallbacks) {
+        if (entry.second) {
+            entry.second(state, errorMsg);
         }
     }
 
@@ -560,17 +643,17 @@ void FujinonCamera::rxLoop()
 
 void FujinonCamera::dispatchFrame(const std::vector<std::uint8_t>& frame)
 {
-    std::vector<TrafficCallback> tbs;
-    std::vector<StatusCallback> sbs;
+    std::vector<std::pair<CallbackId, TrafficCallback>> tbs;
+    std::vector<std::pair<CallbackId, StatusCallback>> sbs;
     {
         std::lock_guard<std::mutex> lock(m_callbackMutex);
         tbs = m_trafficCallbacks;
         sbs = m_statusCallbacks;
     }
 
-    for (const auto& cb : tbs) {
-        if (cb) {
-            cb(false, frame);
+    for (const auto& entry : tbs) {
+        if (entry.second) {
+            entry.second(false, frame);
         }
     }
 
@@ -590,9 +673,9 @@ void FujinonCamera::dispatchFrame(const std::vector<std::uint8_t>& frame)
             std::lock_guard<std::mutex> lock(m_statusMutex);
             m_status = updatedStatus;
         }
-        for (const auto& cb : sbs) {
-            if (cb) {
-                cb(updatedStatus);
+        for (const auto& entry : sbs) {
+            if (entry.second) {
+                entry.second(updatedStatus);
             }
         }
     }
@@ -910,6 +993,56 @@ void FujinonCamera::queryManualIris()
 std::uint64_t FujinonCamera::rxOverflowDrops() const noexcept
 {
     return m_rxOverflowDrops.load(std::memory_order_relaxed);
+}
+
+ScopedCallbackConnection::ScopedCallbackConnection(FujinonCamera* camera, FujinonCamera::CallbackId id) noexcept
+    : m_camera(camera)
+    , m_id(id)
+{
+}
+
+ScopedCallbackConnection::~ScopedCallbackConnection()
+{
+    disconnect();
+}
+
+ScopedCallbackConnection::ScopedCallbackConnection(ScopedCallbackConnection&& other) noexcept
+    : m_camera(other.m_camera)
+    , m_id(other.m_id)
+{
+    other.m_camera = nullptr;
+    other.m_id = FujinonCamera::InvalidCallbackId;
+}
+
+ScopedCallbackConnection& ScopedCallbackConnection::operator=(ScopedCallbackConnection&& other) noexcept
+{
+    if (this != &other) {
+        disconnect();
+        m_camera = other.m_camera;
+        m_id = other.m_id;
+        other.m_camera = nullptr;
+        other.m_id = FujinonCamera::InvalidCallbackId;
+    }
+    return *this;
+}
+
+void ScopedCallbackConnection::disconnect()
+{
+    if (m_camera != nullptr && m_id != FujinonCamera::InvalidCallbackId) {
+        m_camera->removeCallback(m_id);
+        m_camera = nullptr;
+        m_id = FujinonCamera::InvalidCallbackId;
+    }
+}
+
+bool ScopedCallbackConnection::isConnected() const noexcept
+{
+    return m_id != FujinonCamera::InvalidCallbackId;
+}
+
+FujinonCamera::CallbackId ScopedCallbackConnection::id() const noexcept
+{
+    return m_id;
 }
 
 } // namespace FujinonSX800

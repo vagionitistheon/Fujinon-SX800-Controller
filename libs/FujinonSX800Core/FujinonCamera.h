@@ -31,6 +31,9 @@ public:
     using TimeoutCallback = std::function<void(const std::string& queryTag)>;
     using TransportStateCallback = std::function<void(TransportState state, const std::string& errorMsg)>;
 
+    using CallbackId = std::uint64_t;
+    static constexpr CallbackId InvalidCallbackId { 0U };
+
     explicit FujinonCamera(std::shared_ptr<ITransport> transport, std::uint8_t address = 1U);
     ~FujinonCamera();
 
@@ -47,10 +50,17 @@ public:
     void setAddress(std::uint8_t address);
     [[nodiscard]] std::uint8_t getAddress() const noexcept;
 
-    void addStatusCallback(StatusCallback cb);
-    void addTrafficCallback(TrafficCallback cb);
-    void addTimeoutCallback(TimeoutCallback cb);
-    void addTransportStateCallback(TransportStateCallback cb);
+    CallbackId addStatusCallback(StatusCallback cb);
+    CallbackId addTrafficCallback(TrafficCallback cb);
+    CallbackId addTimeoutCallback(TimeoutCallback cb);
+    CallbackId addTransportStateCallback(TransportStateCallback cb);
+
+    bool removeCallback(CallbackId id);
+    bool removeStatusCallback(CallbackId id);
+    bool removeTrafficCallback(CallbackId id);
+    bool removeTimeoutCallback(CallbackId id);
+    bool removeTransportStateCallback(CallbackId id);
+    void clearCallbacks();
     [[nodiscard]] CameraStatus getStatus() const;
 
     void setAutoQueryOnConnect(bool enable) noexcept;
@@ -190,10 +200,34 @@ private:
     std::chrono::steady_clock::time_point m_querySentTime;
 
     mutable std::mutex m_callbackMutex;
-    std::vector<StatusCallback> m_statusCallbacks;
-    std::vector<TrafficCallback> m_trafficCallbacks;
-    std::vector<TimeoutCallback> m_timeoutCallbacks;
-    std::vector<TransportStateCallback> m_transportStateCallbacks;
+    std::atomic<CallbackId> m_nextCallbackId { 1U };
+    std::vector<std::pair<CallbackId, StatusCallback>> m_statusCallbacks;
+    std::vector<std::pair<CallbackId, TrafficCallback>> m_trafficCallbacks;
+    std::vector<std::pair<CallbackId, TimeoutCallback>> m_timeoutCallbacks;
+    std::vector<std::pair<CallbackId, TransportStateCallback>> m_transportStateCallbacks;
+};
+
+/// @class ScopedCallbackConnection
+/// @brief RAII handle managing lifetime of a registered callback subscription.
+class ScopedCallbackConnection {
+public:
+    ScopedCallbackConnection() = default;
+    ScopedCallbackConnection(FujinonCamera* camera, FujinonCamera::CallbackId id) noexcept;
+    ~ScopedCallbackConnection();
+
+    ScopedCallbackConnection(ScopedCallbackConnection&& other) noexcept;
+    ScopedCallbackConnection& operator=(ScopedCallbackConnection&& other) noexcept;
+
+    ScopedCallbackConnection(const ScopedCallbackConnection&) = delete;
+    ScopedCallbackConnection& operator=(const ScopedCallbackConnection&) = delete;
+
+    void disconnect();
+    [[nodiscard]] bool isConnected() const noexcept;
+    [[nodiscard]] FujinonCamera::CallbackId id() const noexcept;
+
+private:
+    FujinonCamera* m_camera { nullptr };
+    FujinonCamera::CallbackId m_id { FujinonCamera::InvalidCallbackId };
 };
 
 } // namespace FujinonSX800

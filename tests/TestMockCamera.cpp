@@ -310,6 +310,67 @@ void testConcurrentConfiguration()
     camera.stop();
 }
 
+void testCallbackManagement()
+{
+    auto mockDevice = std::make_shared<FujinonSX800::MockCameraDevice>(0x07U);
+    FujinonSX800::FujinonCamera camera(mockDevice, 0x07U);
+
+    std::atomic<std::uint32_t> statusCount { 0U };
+    std::atomic<std::uint32_t> trafficCount { 0U };
+    std::atomic<std::uint32_t> transportCount { 0U };
+
+    const auto id1 = camera.addStatusCallback([&](const FujinonSX800::CameraStatus&) { statusCount.fetch_add(1U); });
+    const auto id2
+        = camera.addTrafficCallback([&](bool, const std::vector<std::uint8_t>&) { trafficCount.fetch_add(1U); });
+    const auto id3 = camera.addTransportStateCallback(
+        [&](FujinonSX800::TransportState, const std::string&) { transportCount.fetch_add(1U); });
+
+    SX800_TEST_ASSERT(id1 != FujinonSX800::FujinonCamera::InvalidCallbackId);
+    SX800_TEST_ASSERT(id2 != FujinonSX800::FujinonCamera::InvalidCallbackId);
+    SX800_TEST_ASSERT(id3 != FujinonSX800::FujinonCamera::InvalidCallbackId);
+    SX800_TEST_ASSERT(id1 != id2 && id2 != id3);
+
+    SX800_TEST_ASSERT(camera.start());
+    SX800_TEST_ASSERT(transportCount.load() >= 1U);
+
+    // Remove status callback
+    SX800_TEST_ASSERT(camera.removeStatusCallback(id1));
+    SX800_TEST_ASSERT(!camera.removeStatusCallback(id1));
+    SX800_TEST_ASSERT(!camera.removeCallback(FujinonSX800::FujinonCamera::InvalidCallbackId));
+    SX800_TEST_ASSERT(!camera.removeCallback(999999U));
+
+    // Test ScopedCallbackConnection RAII
+    std::atomic<std::uint32_t> scopedCalls { 0U };
+    {
+        const auto scopedId
+            = camera.addTrafficCallback([&](bool, const std::vector<std::uint8_t>&) { scopedCalls.fetch_add(1U); });
+        FujinonSX800::ScopedCallbackConnection conn(&camera, scopedId);
+        SX800_TEST_ASSERT(conn.isConnected());
+        SX800_TEST_ASSERT(conn.id() == scopedId);
+
+        // Move construction test
+        FujinonSX800::ScopedCallbackConnection movedConn(std::move(conn));
+        SX800_TEST_ASSERT(!conn.isConnected());
+        SX800_TEST_ASSERT(movedConn.isConnected());
+
+        camera.zoomTele();
+        std::this_thread::sleep_for(std::chrono::milliseconds(50));
+        SX800_TEST_ASSERT(scopedCalls.load() > 0U);
+    }
+    // Now movedConn is out of scope and destroyed
+    const auto callsAfterDestroy = scopedCalls.load();
+    camera.zoomWide();
+    std::this_thread::sleep_for(std::chrono::milliseconds(50));
+    SX800_TEST_ASSERT(scopedCalls.load() == callsAfterDestroy);
+
+    // Test clearCallbacks()
+    camera.clearCallbacks();
+    SX800_TEST_ASSERT(!camera.removeTrafficCallback(id2));
+    SX800_TEST_ASSERT(!camera.removeTransportStateCallback(id3));
+
+    camera.stop();
+}
+
 #include <glog/logging.h>
 
 int main([[maybe_unused]] int argc, char* argv[])
@@ -323,6 +384,7 @@ int main([[maybe_unused]] int argc, char* argv[])
     testRxOverflowTracking();
     testEnablePollingAfterStart();
     testConcurrentConfiguration();
+    testCallbackManagement();
 
     std::cout << "[PASS] TestMockCamera completed successfully." << std::endl;
     google::ShutdownGoogleLogging();
