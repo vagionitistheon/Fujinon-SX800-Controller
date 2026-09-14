@@ -135,8 +135,8 @@ public:
 
 private:
     void enqueueCommand(const std::vector<std::uint8_t>& frame, std::string queryTag = "");
+    void enqueueTelemetryQueries();
     void workerLoop();
-    void pollingLoop();
     void reconnectLoop();
     void startReconnect();
     void rxLoop();
@@ -158,7 +158,6 @@ private:
     std::atomic<bool> m_running { false };
     std::atomic<bool> m_connected { false };
     std::thread m_workerThread;
-    std::thread m_pollThread;
     std::thread m_rxThread;
     std::thread m_reconnectThread;
 
@@ -175,9 +174,6 @@ private:
     std::atomic<bool> m_telemetryPolling { false };
     std::atomic<std::uint32_t> m_pollIntervalMs { 1000U };
     std::atomic<std::uint32_t> m_queryTimeoutMs { 1000U };
-    std::mutex m_pollMutex;
-    std::condition_variable m_pollCv;
-    std::mutex m_pollThreadMutex;
 
     std::atomic<bool> m_autoReconnect { true };
     std::atomic<bool> m_reconnectActive { false };

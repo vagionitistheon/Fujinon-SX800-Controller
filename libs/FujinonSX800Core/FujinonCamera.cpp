@@ -51,10 +51,6 @@ bool FujinonCamera::start()
     m_running = true;
     m_rxThread = std::thread(&FujinonCamera::rxLoop, this);
     m_workerThread = std::thread(&FujinonCamera::workerLoop, this);
-    if (m_telemetryPolling.load()) {
-        std::lock_guard<std::mutex> lock(m_pollThreadMutex);
-        m_pollThread = std::thread(&FujinonCamera::pollingLoop, this);
-    }
 
     if (m_autoQueryOnConnect.load()) {
         queryAll();
@@ -70,7 +66,6 @@ void FujinonCamera::stop()
     m_queueCv.notify_all();
     m_rxCv.notify_all();
     m_responseCv.notify_all();
-    m_pollCv.notify_all();
     m_reconnectCv.notify_all();
 
     if (m_rxThread.joinable()) {
@@ -78,12 +73,6 @@ void FujinonCamera::stop()
     }
     if (m_workerThread.joinable()) {
         m_workerThread.join();
-    }
-    {
-        std::lock_guard<std::mutex> lock(m_pollThreadMutex);
-        if (m_pollThread.joinable()) {
-            m_pollThread.join();
-        }
     }
     if (m_reconnectThread.joinable()) {
         m_reconnectThread.join();
@@ -163,13 +152,7 @@ void FujinonCamera::setTelemetryPolling(bool enable, std::uint32_t intervalMs) n
 {
     m_telemetryPolling.store(enable);
     m_pollIntervalMs.store((intervalMs > 0U) ? intervalMs : 1000U);
-    if (enable && m_running.load()) {
-        std::lock_guard<std::mutex> lock(m_pollThreadMutex);
-        if (!m_pollThread.joinable()) {
-            m_pollThread = std::thread(&FujinonCamera::pollingLoop, this);
-        }
-    }
-    m_pollCv.notify_all();
+    m_queueCv.notify_one();
 }
 
 bool FujinonCamera::getTelemetryPolling() const noexcept
@@ -250,16 +233,67 @@ void FujinonCamera::enqueueCommand(const std::vector<std::uint8_t>& frame, std::
     m_queueCv.notify_one();
 }
 
+void FujinonCamera::enqueueTelemetryQueries()
+{
+    std::lock_guard<std::mutex> lock(m_queueMutex);
+    bool hasZoom { false };
+    bool hasFocus { false };
+    bool hasLens { false };
+
+    for (const auto& item : m_commandQueue) {
+        if (item.queryTag == "QueryZoom") {
+            hasZoom = true;
+        } else if (item.queryTag == "QueryFocus") {
+            hasFocus = true;
+        } else if (item.queryTag == "QueryLens") {
+            hasLens = true;
+        }
+    }
+
+    if (!hasZoom) {
+        m_commandQueue.push_back({ m_builder.buildQueryZoomPosition(), "QueryZoom" });
+    }
+    if (!hasFocus) {
+        m_commandQueue.push_back({ m_builder.buildQueryFocusPosition(), "QueryFocus" });
+    }
+    if (!hasLens) {
+        m_commandQueue.push_back({ m_builder.buildQueryLensStatus(), "QueryLens" });
+    }
+}
+
 void FujinonCamera::workerLoop()
 {
+    bool lastPollingActive { false };
+    auto nextPollTime = std::chrono::steady_clock::now();
+
     while (m_running) {
         checkQueryTimeout();
+
+        const bool pollingActive = m_telemetryPolling.load(std::memory_order_relaxed) && isConnected();
+        if (pollingActive) {
+            const auto now = std::chrono::steady_clock::now();
+            if (!lastPollingActive || now >= nextPollTime) {
+                enqueueTelemetryQueries();
+                nextPollTime = now + std::chrono::milliseconds(m_pollIntervalMs.load(std::memory_order_relaxed));
+            }
+        }
+        lastPollingActive = pollingActive;
 
         CommandItem item;
         {
             std::unique_lock<std::mutex> lock(m_queueMutex);
-            m_queueCv.wait_for(
-                lock, std::chrono::milliseconds(50), [this] { return !m_commandQueue.empty() || !m_running; });
+            if (m_commandQueue.empty() && m_running) {
+                if (m_telemetryPolling.load(std::memory_order_relaxed) && isConnected()) {
+                    const auto now = std::chrono::steady_clock::now();
+                    const auto waitDuration = (nextPollTime > now)
+                        ? std::chrono::duration_cast<std::chrono::milliseconds>(nextPollTime - now)
+                        : std::chrono::milliseconds(0);
+                    m_queueCv.wait_for(lock, waitDuration, [this] { return !m_commandQueue.empty() || !m_running; });
+                } else {
+                    m_queueCv.wait_for(
+                        lock, std::chrono::milliseconds(100), [this] { return !m_commandQueue.empty() || !m_running; });
+                }
+            }
 
             if (!m_running) {
                 break;
@@ -313,29 +347,6 @@ void FujinonCamera::workerLoop()
 
         // 20ms inter-command pacing delay per Pelco-D spec
         std::this_thread::sleep_for(std::chrono::milliseconds(20));
-    }
-}
-
-void FujinonCamera::pollingLoop()
-{
-    while (m_running) {
-        {
-            std::unique_lock<std::mutex> lock(m_pollMutex);
-            m_pollCv.wait_for(lock, std::chrono::milliseconds(m_pollIntervalMs.load()), [this] { return !m_running; });
-        }
-
-        if (!m_running) {
-            break;
-        }
-
-        if (!m_telemetryPolling.load()) {
-            continue;
-        }
-
-        // Periodically refresh dynamic telemetry
-        enqueueCommand(m_builder.buildQueryZoomPosition(), "QueryZoom");
-        enqueueCommand(m_builder.buildQueryFocusPosition(), "QueryFocus");
-        enqueueCommand(m_builder.buildQueryLensStatus(), "QueryLens");
     }
 }
 
